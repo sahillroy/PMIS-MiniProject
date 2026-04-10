@@ -30,4 +30,7 @@ def create_app():
             "model_loaded": True
         })
 
+    with app.app_context():
+        db.create_all()
+
     return app
