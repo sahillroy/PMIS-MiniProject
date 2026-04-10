@@ -83,3 +83,13 @@ export enum SkillCategory {
   FINANCE = 'Finance/Banking',
   TOURISM = 'Tourism'
 }
+
+export interface Application {
+  application_id: number;
+  status: string;
+}
+
+export interface Stats {
+  total_candidates: number;
+  total_internships: number;
+}
