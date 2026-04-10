@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 interface Props {
   onStart: () => void;
+  onDemo: () => void;
 }
 
-const HomePage: React.FC<Props> = ({ onStart }) => {
+const HomePage: React.FC<Props> = ({ onStart, onDemo }) => {
   const { t, i18n } = useTranslation();
   
   const toggleLanguage = () => {
@@ -37,36 +38,55 @@ const HomePage: React.FC<Props> = ({ onStart }) => {
           Discover government-certified internships tailored to your education, location, and skills. Step-by-step guidance in your preferred language.
         </p>
 
-        {/* Stats Row */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-8">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Live Insights</h2>
-          <div className="flex justify-between text-center divide-x divide-gray-100">
-            <div className="px-2">
-              <span className="block text-xl font-bold text-primary-blue">1.18 L</span>
-              <span className="block text-xs text-gray-500 mt-1">Opportunities</span>
-            </div>
-            <div className="px-2">
-              <span className="block text-xl font-bold text-primary-blue">24</span>
-              <span className="block text-xs text-gray-500 mt-1">Sectors</span>
-            </div>
-            <div className="px-2">
-              <span className="block text-xl font-bold text-primary-blue">735</span>
-              <span className="block text-xs text-gray-500 mt-1">Districts</span>
-            </div>
-          </div>
+        {/* How it Works / Stats section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 text-left">
+          <h2 className="text-sm font-black text-gray-800 uppercase tracking-wider mb-2">Phase 1 Bottleneck</h2>
+          <p className="text-xs text-gray-500 font-medium mb-4 leading-relaxed">
+            <strong className="text-gray-800">621K applications → 127K opportunities → only 8.7K joined (10.6%).</strong><br/>
+            With AI matching and localized accessibility, we target a <strong className="text-primary-blue">35-40% conversion rate</strong>.
+          </p>
+          
+          <h2 className="text-sm font-black text-gray-800 uppercase tracking-wider mb-3 pt-2 border-t border-gray-100">How it works</h2>
+          <ul className="space-y-3">
+             <li className="flex items-start gap-3">
+               <div className="w-6 h-6 rounded-full bg-blue-50 text-primary-blue flex justify-center items-center text-xs font-bold shrink-0">1</div>
+               <p className="text-xs text-gray-600 font-medium mt-0.5">Tell us your background and rural locality restrictions.</p>
+             </li>
+             <li className="flex items-start gap-3">
+               <div className="w-6 h-6 rounded-full bg-blue-50 text-primary-blue flex justify-center items-center text-xs font-bold shrink-0">2</div>
+               <p className="text-xs text-gray-600 font-medium mt-0.5">Select targeted skills securely via visual mapping.</p>
+             </li>
+             <li className="flex items-start gap-3">
+               <div className="w-6 h-6 rounded-full bg-blue-50 text-primary-blue flex justify-center items-center text-xs font-bold shrink-0">3</div>
+               <p className="text-xs text-gray-600 font-medium mt-0.5">Let AI securely map gaps and apply diversity priority matching.</p>
+             </li>
+             <li className="flex items-start gap-3">
+               <div className="w-6 h-6 rounded-full bg-blue-50 text-primary-blue flex justify-center items-center text-xs font-bold shrink-0">4</div>
+               <p className="text-xs text-gray-600 font-medium mt-0.5">Apply 1-click matching straight to central capacity systems.</p>
+             </li>
+          </ul>
         </div>
       </div>
 
       {/* Footer / CTA Section */}
-      <div className="px-6 pb-12 pt-4 bg-white border-t border-gray-100">
-        <button 
-          onClick={onStart}
-          aria-label={t('find_internship')}
-          className="w-full bg-primary-blue hover:bg-blue-900 active:bg-blue-950 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition flex justify-center items-center gap-2 group min-h-[44px]"
-        >
-          <span>{t('find_internship')}</span>
-          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-        </button>
+      <div className="px-6 pb-8 pt-4 bg-white border-t border-gray-100">
+        <div className="space-y-3 mb-4">
+          <button 
+            onClick={onStart}
+            aria-label={t('find_internship')}
+            className="w-full bg-primary-blue hover:bg-blue-900 active:bg-blue-950 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition flex justify-center items-center gap-2 group min-h-[44px]"
+          >
+            <span>{t('find_internship')}</span>
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          <button 
+            onClick={onDemo}
+            className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-xl border border-gray-200 transition text-sm min-h-[44px]"
+          >
+            Try Demo (No Sign-up)
+          </button>
+        </div>
         <p className="text-xs text-center text-gray-400 mt-4">
           A platform for youth upskilling and affirmative action.
         </p>

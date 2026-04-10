@@ -1,7 +1,14 @@
-venv/
-env/
-node_modules/
-__pycache__/
-*.pyc
-.env
+# Backend
+pmis-backend/venv/
+pmis-backend/__pycache__/
+pmis-backend/*.db
+pmis-backend/.env
+
+# Frontend
+pmis-frontend/node_modules/
+pmis-frontend/dist/
+pmis-frontend/.env
+
+# General
 .DS_Store
+*.log

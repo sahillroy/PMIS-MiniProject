@@ -1,266 +1,83 @@
-# 🎯 PMIS AI Recommendation Engine
-### Problem Statement #25033 · Ministry of Corporate Affairs · Smart Allocation Engine
+# PMIS AI-Powered Internship Recommendation Engine
 
-> **AI-Based Smart Allocation Engine** for India's PM Internship Scheme — matching 6.21 lakh candidates to 1.27 lakh internship opportunities using hybrid ML.
+**Problem Statement:** #25033 (PM Internship Scheme Optimization)
+**Team Name:** The Architect Loop
+**Members:** Aarya Bhangadia, Rounak Nagwani, Sahil Roy, Tanmay Gupta, Paras Sharma
+**College:** RCOEM Nagpur, Dept. AICS, Semester VI
 
----
+## Overview
+The PMIS pipeline currently oversees massive applicant dropout loops (Phase 1 saw 621K registrations but only 10.6% organic conversion). The core issue stems from manual catalog routing resulting in "choice paralysis" among rural youths attempting to parse complex requirements.
 
-## 📊 The Problem
+This project delivers a **mobile-first, accessibility-driven PWA frontend** bridging an **ML-Optimized Flask backend** to mathematically automate the application routing lifecycle, targeting a direct 40% organic conversion boost.
 
-| Metric | Value |
-|--------|-------|
-| Total Applications (Phase 1) | 6,21,000 |
-| Available Opportunities | 1,27,000 |
-| Actually Joined | **8,700 (10.6%)** |
-| Target Conversion (with AI) | **35–40%** |
+## Architecture
 
-Candidates cannot find internships that match them → random applications → rejection → dropout. This engine fixes that.
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     React Frontend                       │
-│   4-Step Wizard → Recommendation Cards → Apply Flow     │
-└─────────────────────┬───────────────────────────────────┘
-                      │ REST API (Axios)
-┌─────────────────────▼───────────────────────────────────┐
-│                   Flask REST API                         │
-│   /recommend  /profile  /internships  /apply  /stats    │
-└──────┬───────────────────────────┬───────────────────────┘
-       │                           │
-┌──────▼──────────┐    ┌───────────▼────────────┐
-│  ML Engine      │    │   PostgreSQL / SQLite   │
-│  ─ TF-IDF       │    │   Candidates            │
-│  ─ Cosine Sim   │    │   Internships           │
-│  ─ SVD (CF)     │    │   Applications          │
-│  ─ Affirmative  │    │   RecommendationLogs    │
-│    Action Layer │    └────────────────────────┘
-└─────────────────┘
+```text
+[ Mobile-First PWA (React + Tailwind) ]  <-- (Low-Bandwidth Suspense Caching)
+                  |
+    [ Zustand Profile Storage Layer ]
+                  |
+        ( HTTP gzip via Flask )
+                  |
+[ Flask API ] ---> [ SQLite Database ]
+                  |
+[ Recommendation Engine (scikit-learn) ]
+  ├── Content-Based Filtering (Cosine Similarity)
+  ├── Affirmative Action Boosts (SC/ST/Rural weighting logic)
+  └── Capacity Enforcement Checks
 ```
 
----
+## Machine Learning Approach
 
-## 🚀 Quick Start (Docker)
+Our recommendation pipeline moves away from basic string matching toward a **Hybrid Factorization model**. We compute Cosine Similarity over generated TF-IDF matrices mapping rural candidate skills against strict sector capacities. Additionally, when candidate constraints block generic IT placements, the engine organically reroutes their profile towards localized, high-capacity Agriculture/Manufacturing variants possessing lower qualification thresholds.
 
+To combat inequality gradients across rural segments, the engine leverages an **Affirmative Action Weighting Matrix**. If a user explicitly specifies `Category = SC/ST` or `Is_Rural = True`, an organic multiplier (+12%) securely bridges their overall match score probability without degrading technical qualification baseline safety walls, surfacing guaranteed placements prominently to structurally disadvantaged learners.
+
+## Local Execution Instructions
+
+Execute the root node executable mapping locally:
 ```bash
-git clone https://github.com/YOUR_USERNAME/pmis-ai-engine.git
-cd pmis-ai-engine
-cp pmis-backend/.env.example pmis-backend/.env
-docker-compose up --build
+chmod +x setup.sh
+./setup.sh
 ```
+OR standard execution mappings:
+1. `docker-compose up --build`
+2. Connect cleanly to `http://localhost:5173`
 
-- Frontend: http://localhost:5173  
-- Backend API: http://localhost:5000/api/v1  
-- API Health: http://localhost:5000/api/v1/health
+## Core API Routes mapping
+- `POST /api/v1/recommend/` -> Absorbs `CandidateProfile`, injects AI matrix tracking `AffirmativeBoosts`, yields array of `Recommendation`.
+- `GET /api/v1/stats/` -> Core backend KPIs for admin oversight.
+- `POST /api/v1/apply/` -> Locks Application ID securely.
 
----
+## Quick Start for Contributors
 
-## 🛠️ Manual Setup (Without Docker)
+### Prerequisites
+- Python 3.9+
+- Node.js 18+
+- Git
 
-### Backend
+### Backend Setup
 ```bash
 cd pmis-backend
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Mac/Linux
 pip install -r requirements.txt
-python seed/generate_seed.py      # Seeds 500 candidates + 100 internships
-python run.py                     # Starts Flask on port 5000
+python seed/generate_seed.py
+python run.py
+# Flask runs on http://127.0.0.1:5000
 ```
 
-### Frontend
+### Frontend Setup
 ```bash
 cd pmis-frontend
 npm install
-npm run dev                       # Starts Vite on port 5173
+npm run dev
+# React runs on http://localhost:5173
 ```
 
----
-
-## 🤖 ML Approach
-
-### Content-Based Filtering (primary)
-Uses TF-IDF vectorisation on candidate skills and internship required skills, computing cosine similarity. Combined with education hierarchy matching, sector interest overlap, and location preference scoring.
-
-| Component | Weight |
-|-----------|--------|
-| Skill Match (TF-IDF + Cosine) | 35% |
-| Education Match | 25% |
-| Sector Interest | 20% |
-| Location | 15% |
-| Slot Availability | 5% |
-
-### Collaborative Filtering (secondary)
-SVD model (scikit-surprise) trained on past application interactions. Blended with content-based score based on interaction history depth (cold-start → 100% content-based, 10+ interactions → 60/40 blend).
-
-### Affirmative Action Layer
-Per PM Internship Scheme guidelines, diversity boosts are applied as additive weights (capped at +0.20):
-
-| Criterion | Boost |
-|-----------|-------|
-| Rural / Village area | +0.08 |
-| SC/ST category | +0.10 |
-| OBC category | +0.05 |
-| Aspirational district | +0.06 |
-| First-time intern | +0.04 |
-| First-generation learner | +0.03 |
-
-Every boost is **visible in the UI** — evaluators can see exactly why a recommendation was ranked higher.
-
----
-
-## 📁 Project Structure
-
-```
-pmis/
-├── pmis-backend/
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   ├── routes/
-│   │   │   ├── recommend.py
-│   │   │   ├── profile.py
-│   │   │   └── internships.py
-│   │   ├── ml/
-│   │   │   ├── content_based.py       ← TF-IDF + cosine similarity
-│   │   │   ├── collaborative.py       ← SVD collaborative filter
-│   │   │   └── hybrid_scorer.py       ← Combines both + AA boost
-│   │   └── utils/
-│   │       └── affirmative_action.py  ← Diversity scoring layer
-│   ├── seed/
-│   │   └── generate_seed.py
-│   ├── config.py
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── run.py
-├── pmis-frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ui/          ← Button, Card, Badge, ProgressBar
-│   │   │   ├── wizard/      ← Step1–4 components
-│   │   │   └── results/     ← RecommendationCard, SkillChart, MatchBreakdown
-│   │   ├── pages/
-│   │   │   ├── HomePage.tsx
-│   │   │   ├── WizardPage.tsx
-│   │   │   └── ResultsPage.tsx
-│   │   ├── hooks/           ← useRecommendations, useProfile
-│   │   ├── store/           ← Zustand store
-│   │   ├── types/           ← TypeScript interfaces
-│   │   ├── i18n/            ← en.json + hi.json
-│   │   └── api/             ← Axios client
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tailwind.config.js
-├── docker-compose.yml
-├── setup.sh
-└── README.md
-```
-
----
-
-## 🔌 API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/recommend` | Get ranked internship recommendations |
-| `POST` | `/api/v1/profile/create` | Create candidate profile |
-| `GET` | `/api/v1/internships` | List internships (paginated, filterable) |
-| `GET` | `/api/v1/internships/:id` | Internship details |
-| `POST` | `/api/v1/apply` | Apply to an internship |
-| `GET` | `/api/v1/stats` | Aggregate platform statistics |
-| `GET` | `/api/v1/health` | Health check |
-
-### Sample Request — `/api/v1/recommend`
-```json
-POST /api/v1/recommend
-{
-  "profile": {
-    "education_level": "Graduate",
-    "field_of_study": "Computer Science",
-    "skills": ["Python", "SQL", "Communication"],
-    "sector_interests": ["IT", "Banking"],
-    "preferred_state": "Maharashtra",
-    "category": "SC",
-    "is_rural": true
-  }
-}
-```
-
-### Sample Response
-```json
-{
-  "recommendations": [
-    {
-      "company": "TCS",
-      "role": "Software Developer Intern",
-      "sector": "IT",
-      "location": "Mumbai, Maharashtra",
-      "stipend_monthly": 5000,
-      "match_percentage": 91,
-      "content_score": 0.78,
-      "cf_score": 0.5,
-      "affirmative_boost": 0.18,
-      "final_score": 0.91,
-      "scoring_mode": "content_only",
-      "reasons": {
-        "skill_match": { "score": 0.85, "matched_skills": ["Python", "SQL"] },
-        "sector_match": { "score": 1.0, "reason": "IT matches your interest" },
-        "affirmative_boosts_applied": [
-          { "reason": "SC/ST category", "boost": 0.10 },
-          { "reason": "Rural district candidate", "boost": 0.08 }
-        ],
-        "total_boost": 0.18
-      }
-    }
-  ]
-}
-```
-
----
-
-## 🌐 Features
-
-- ✅ Hybrid AI recommendation (content-based + collaborative filtering)
-- ✅ 4-step mobile-first onboarding wizard
-- ✅ Affirmative action scoring (SC/ST/OBC, rural boost)
-- ✅ "Why this match?" explainability on every card
-- ✅ Hindi language toggle (EN / हिं)
-- ✅ Demo mode (pre-filled rural SC profile from Nagpur)
-- ✅ Works on mobile (375px, budget Android phones)
-- ✅ One-command Docker startup
-- ✅ WCAG AA accessibility
-
----
-
-## 🚧 Sprint Plan
-
-The full 2-day sprint plan is in [`PMIS_2Day_Sprint_Plan.md`](./PMIS_2Day_Sprint_Plan.md). Each slot has a ready-to-use AI prompt.
-
-**Day 1** — Backend + ML Engine  
-**Day 2** — Frontend + Integration + Polish
-
----
-
-## 👥 Team
-
-| Name | Role |
-|------|------|
-| Aarya Bhangadia | — |
-| Rounak Nagwani | — |
-| Sahil Roy | — |
-| Tanmay Gupta | — |
-| Paras Sharma | — |
-
-**RCOEM Nagpur · Department of AICS · B.Tech IT/CSE (AICS) · Semester VI**  
-Problem Statement #25033 · Ministry of Corporate Affairs
-
----
-
-## 📋 Phase 2 Roadmap (Post-Hackathon)
-
-- Aadhaar OTP authentication
-- Real PMIS portal API integration
-- IndicBERT for multilingual skill extraction
-- Full PWA offline mode
-- DPDP Act compliance audit
-- Kubernetes production deployment
+### Default URLs
+- Frontend: `http://localhost:5173`
+- Backend API: `http://127.0.0.1:5000`
+- API Health: `http://127.0.0.1:5000/api/v1/health`
+- Stats: `http://127.0.0.1:5000/api/v1/stats`

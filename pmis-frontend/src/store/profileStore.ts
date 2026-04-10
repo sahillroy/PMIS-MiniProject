@@ -32,6 +32,7 @@ interface ProfileStore extends CandidateState {
   
   fetchRecommendations: () => Promise<void>;
   applyToInternshipLocal: (internshipId: number) => void;
+  loadDemoProfile: () => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -60,6 +61,20 @@ export const useProfileStore = create<ProfileStore>()(
       setStep: (step) => set({ currentStep: step }),
       nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 4) })),
       prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
+      
+      loadDemoProfile: () => set({
+        education_level: '12th Pass',
+        field_of_study: 'Arts',
+        skills: ['Communication', 'Data Entry'],
+        sector_interests: ['Retail', 'Agriculture'],
+        preferred_state: 'Maharashtra',
+        open_to_pan_india: false,
+        category: 'ST',
+        is_rural: true,
+        district: 'Nagpur',
+        name: 'Demo Candidate',
+        currentStep: 4
+      }),
 
       fetchRecommendations: async () => {
         const state = get();

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import HomePage from './pages/HomePage';
 import WizardPage from './pages/WizardPage';
 import ResultsPage from './pages/ResultsPage';
+import StatsPage from './pages/StatsPage';
 import { useProfileStore } from './store/profileStore';
 import './i18n/config';
 import './index.css';
@@ -13,9 +14,15 @@ function App() {
   const hasPopulatedProfile = Boolean(store.education_level && store.skills.length > 0);
   const initialView = hasPopulatedProfile && store.currentStep === 4 ? 'results' : 'home';
   
-  const [view, setView] = useState<'home' | 'wizard' | 'results'>(initialView);
+  // Natively check if the user manually routed to /stats without ReactRouter payload
+  const isStatsUrl = window.location.pathname === '/stats';
+  const [view, setView] = useState<'home' | 'wizard' | 'results' | 'stats'>(isStatsUrl ? 'stats' : initialView);
 
-  let content = <HomePage onStart={() => setView('wizard')} />;
+  let content = <HomePage onStart={() => setView('wizard')} onDemo={() => {
+     store.loadDemoProfile();
+     setView('results');
+  }} />;
+  
   if (view === 'wizard') {
     content = <WizardPage onFinish={() => setView('results')} onExit={() => setView('home')} />;
   } else if (view === 'results') {
@@ -24,6 +31,8 @@ function App() {
       useProfileStore.getState().setStep(1);
       setView('wizard');
     }} />;
+  } else if (view === 'stats') {
+    content = <StatsPage onBack={() => setView('home')} />;
   }
 
   return (
