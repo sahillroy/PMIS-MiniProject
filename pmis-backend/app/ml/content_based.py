@@ -133,11 +133,11 @@ class ContentBasedRecommender:
         score = (total - filled) / total
         return float(score), (total - filled)
 
-    def recommend(self, candidate_id, top_n=5):
+    def recommend(self, candidate_id, top_n=5, candidate_obj=None):
         if not self._is_loaded:
             self.load_internships()
             
-        candidate = Candidate.query.get(candidate_id)
+        candidate = candidate_obj if candidate_obj else Candidate.query.get(candidate_id)
         if not candidate:
             return []
             
