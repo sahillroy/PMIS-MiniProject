@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 
 def create_app():
     app = Flask(__name__)
@@ -15,5 +15,19 @@ def create_app():
     app.register_blueprint(recommend_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(internships_bp)
+
+    @app.route('/api/v1/health')
+    def health():
+        from app.models import db
+        try:
+            db.session.execute(db.text('SELECT 1'))
+            db_status = True
+        except:
+            db_status = False
+        return jsonify({
+            "status": "ok",
+            "db_connected": db_status,
+            "model_loaded": True
+        })
 
     return app
