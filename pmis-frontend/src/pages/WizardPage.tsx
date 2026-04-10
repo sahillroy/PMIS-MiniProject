@@ -53,10 +53,11 @@ const WizardPage: React.FC<Props> = ({ onFinish, onExit }) => {
         </div>
         
         {/* Progress Bar */}
-        <div className="flex gap-1.5 w-full">
+        <div className="flex gap-1.5 w-full" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={4}>
           {[1, 2, 3, 4].map((step) => (
             <div 
               key={step} 
+              aria-current={step === currentStep ? "step" : undefined}
               className={`h-2 flex-1 rounded-full transition-colors ${
                 step <= currentStep ? 'bg-primary-blue' : 'bg-gray-200'
               }`}
