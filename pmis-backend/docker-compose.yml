@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  flask-api:
+    build: .
+    container_name: pmis-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:///app.db
+      - SECRET_KEY=super-secret-key
+    volumes:
+      - ./pmis.db:/app/pmis.db
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: pmis-postgres
+    environment:
+      POSTGRES_USER: pmis_user
+      POSTGRES_PASSWORD: pmis_password
+      POSTGRES_DB: pmis_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: pmis-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
