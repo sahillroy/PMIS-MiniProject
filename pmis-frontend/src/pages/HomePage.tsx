@@ -42,7 +42,9 @@ const HomePage: React.FC<Props> = ({ onStart, onDemo }) => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 text-left">
           <h2 className="text-sm font-black text-gray-800 uppercase tracking-wider mb-2">Phase 1 Bottleneck</h2>
           <p className="text-xs text-gray-500 font-medium mb-4 leading-relaxed">
-            <strong className="text-gray-800">621K applications → 127K opportunities → only 8.7K joined (10.6%).</strong><br/>
+            <span className="block mb-1 sm:inline">
+              <strong className="text-gray-800">621K applications → 127K opportunities → only 8.7K joined (10.6%).</strong>
+            </span>
             With AI matching and localized accessibility, we target a <strong className="text-primary-blue">35-40% conversion rate</strong>.
           </p>
           

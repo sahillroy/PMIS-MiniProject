@@ -69,17 +69,18 @@ export const useProfileStore = create<ProfileStore>()(
       incrementSessionFeedbackCount: () => set((state) => ({ sessionFeedbackCount: state.sessionFeedbackCount + 1 })),
       
       loadDemoProfile: () => set({
-        education_level: '12th',           // matches DB enum: 10th|12th|ITI|Diploma|Graduate
-        field_of_study: 'Arts',
-        skills: ['Communication', 'Data Entry', 'MS Office'],
-        sector_interests: ['Retail', 'Agriculture'],
-        preferred_state: 'Maharashtra',
+        name: 'Arjun Kumar',
+        education_level: 'Graduate',
+        field_of_study: 'Computer Science',
+        skills: ['Computer Basics', 'English Speaking'],
+        sector_interests: ['IT/Software', 'Education'],
+        preferred_state: 'Uttar Pradesh',
         open_to_pan_india: false,
-        category: 'ST',
+        category: 'SC',
         is_rural: true,
-        district: 'Nagpur',
-        name: 'Demo Candidate',
-        currentStep: 4
+        district: 'Bastar',
+        currentStep: 4,
+        min_stipend_preference: 5000
       }),
 
       fetchRecommendations: async () => {
@@ -109,9 +110,8 @@ export const useProfileStore = create<ProfileStore>()(
         }
       },
 
-      applyToInternshipLocal: (id: number) => {
+      applyToInternshipLocal: (_id: number) => {
         // Used to optimistically update UI without heavy refetches
-        console.log(`Marked internship ${id} as applied locally.`);
       }
     }),
     {

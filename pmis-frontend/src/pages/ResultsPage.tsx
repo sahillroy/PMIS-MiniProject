@@ -341,8 +341,8 @@ export default function ResultsPage({ onSearchAgain }: Props) {
         <ComparePanel 
            internships={displayData.filter(r => selectedForCompare.includes(String(r.internship_id)))}
            onClose={() => setCompareOpen(false)}
-           onApply={(id) => {
-             console.log("Applying to", id, "from compare mode");
+           onApply={(_id) => {
+             // Navigation or state feedback handled in component
            }}
         />
       )}

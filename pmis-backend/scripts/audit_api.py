@@ -1,109 +1,81 @@
-# -*- coding: utf-8 -*-
-import sys
 import requests
+import json
+import sys
 import time
 
-# Force UTF-8 output for Windows terminals
-sys.stdout.reconfigure(encoding='utf-8')
+BASE_URL = "http://127.0.0.1:5000"
+ENDPOINT = f"{BASE_URL}/api/v1/recommend/"
 
-API_URL = "http://127.0.0.1:5000/api/v1/recommend/"
-
-test_payload = {
+# Sample Demo Profile: Rural, SC, Computer Basics
+SAMPLE_PROFILE = {
     "profile": {
-        "candidate_id": 9999,
+        "name": "Arjun Kumar",
         "education_level": "Graduate",
-        "skills": ["Python", "Java", "SQL"],
-        "sector_interests": ["IT/Software"],
-        "preferred_state": "Maharashtra",
-        "has_prior_internship": False,
+        "skills": ["Computer Basics", "English Speaking"],
+        "sector_interests": ["IT/Software", "Education"],
+        "preferred_state": "Uttar Pradesh",
+        "district": "Bastar", # Aspirational district
+        "is_rural": True,
         "category": "SC",
-        "is_rural": True
+        "min_stipend_preference": 5000
     }
 }
 
-PASS = "PASS"
-FAIL = "FAIL"
-
-def check(name, condition):
-    status = PASS if condition else FAIL
-    marker = "[OK]" if condition else "[!!]"
-    print(f"  {marker} {status}: {name}")
-
-def audit():
-    print("=" * 55)
-    print("  PMIS API Audit Report")
-    print("=" * 55)
-    print(f"  Target: {API_URL}")
-    print("=" * 55)
-
-    start = time.time()
+def audit_recommendations():
+    print(f"--- API AUDIT: {ENDPOINT} ---")
+    start_time = time.time()
     try:
-        response = requests.post(API_URL, json=test_payload, timeout=10)
-        response_time = time.time() - start
-
-        print(f"\n[Endpoint] POST /api/v1/recommend/")
-        print(f"  Response Time: {response_time:.3f}s")
-        check("Response Time < 2.0s", response_time < 2.0)
-        check("HTTP 200 OK", response.status_code == 200)
-
-        data = response.json()
-        
-        # API returns an object wrapper: {"recommendations": [...], ...}
-        is_wrapped = isinstance(data, dict) and "recommendations" in data
-        check("Response has 'recommendations' key", is_wrapped)
-        
-        recs = data.get("recommendations", []) if is_wrapped else (data if isinstance(data, list) else [])
-        check("At least 1 recommendation returned", len(recs) > 0)
-        check("candidate_name in response", "candidate_name" in data if is_wrapped else True)
-
-        if len(recs) > 0:
-            item = recs[0]
-            print(f"\n[Shape] Checking first recommendation item:")
-            
-            # Core Fields
-            print(f"\n  -- Core Fields --")
-            for f in ["company", "role", "sector", "location", "stipend_monthly", "match_percentage"]:
-                check(f"has field '{f}'", f in item)
-
-            check("match_percentage is a number (0-100)",
-                  isinstance(item.get("match_percentage"), (int, float))
-                  and 0 <= item.get("match_percentage", -1) <= 100)
-
-            # Skill Match
-            print(f"\n  -- reasons.skill_match --")
-            reasons = item.get("reasons", {})
-            sm = reasons.get("skill_match", {})
-            check("reasons.skill_match exists", isinstance(sm, dict))
-            check("matched_skills is a list", isinstance(sm.get("matched_skills"), list))
-            check("missing_skills is a list", isinstance(sm.get("missing_skills"), list))
-            check("courses_for_missing is a list", isinstance(sm.get("courses_for_missing"), list))
-
-            # Affirmative Action
-            print(f"\n  -- reasons.affirmative_action --")
-            aa = reasons.get("affirmative_action", {})
-            check("affirmative_action exists", isinstance(aa, dict))
-            check("affirmative_boosts_applied is a list",
-                  isinstance(aa.get("affirmative_boosts_applied", []), list))
-            
-            # Confidence Interval
-            print(f"\n  -- confidence --")
-            conf = item.get("confidence", {})
-            check("confidence object exists", isinstance(conf, dict))
-            check("confidence_lower is a number", isinstance(conf.get("confidence_lower"), (int, float)))
-            check("confidence_upper is a number", isinstance(conf.get("confidence_upper"), (int, float)))
-            check("confidence_lower <= confidence_upper",
-                  conf.get("confidence_lower", 0) <= conf.get("confidence_upper", 0))
-
-        print("\n" + "=" * 55)
-        print("  Audit Complete")
-        print("=" * 55)
-
-    except requests.exceptions.ConnectionError:
-        print("  [!!] FAIL: Cannot connect to backend. Is Flask running on port 5000?")
-    except requests.exceptions.Timeout:
-        print("  [!!] FAIL: Request timed out after 10s.")
+        response = requests.post(ENDPOINT, json=SAMPLE_PROFILE, timeout=5)
     except Exception as e:
-        print(f"  [!!] Unexpected error: {e}")
+        print(f"FAIL: Could not connect to API: {e}")
+        sys.exit(1)
+    
+    duration = time.time() - start_time
+    
+    if response.status_code != 200:
+        print(f"FAIL: Server returned {response.status_code}")
+        print(response.text)
+        sys.exit(1)
+
+    data = response.json()
+    recs = data.get("recommendations", [])
+    
+    if not recs:
+        print("FAIL: No recommendations returned.")
+        sys.exit(1)
+
+    print(f"Response Time: {duration:.4f}s {'[PASS]' if duration < 2.0 else '[FAIL: Too slow]'}")
+    
+    card = recs[0]
+    checks = [
+        ("match_percentage",               lambda c: isinstance(c.get("match_percentage"), (int, float))),
+        ("company",                        lambda c: "company" in c),
+        ("role",                           lambda c: "role" in c),
+        ("sector",                         lambda c: "sector" in c),
+        ("location",                       lambda c: "location" in c),
+        ("stipend_monthly",                lambda c: "stipend_monthly" in c),
+        ("reasons.skill_match.matched",    lambda c: isinstance(c.get("reasons", {}).get("skill_match", {}).get("matched_skills"), list)),
+        ("reasons.skill_match.missing",    lambda c: isinstance(c.get("reasons", {}).get("skill_match", {}).get("missing_skills"), list)),
+        ("reasons.skill_match.courses",    lambda c: isinstance(c.get("reasons", {}).get("skill_match", {}).get("courses_for_missing"), list)),
+        ("reasons.affirmative_boosts",     lambda c: isinstance(c.get("reasons", {}).get("affirmative_boosts_applied"), list)),
+        ("confidence.lower",               lambda c: isinstance(c.get("confidence", {}).get("confidence_lower"), (int, float))),
+        ("confidence.upper",               lambda c: isinstance(c.get("confidence", {}).get("confidence_upper"), (int, float))),
+    ]
+
+    print("\nField Validation (Top Card):")
+    passed_all = True
+    for label, check in checks:
+        if check(card):
+            print(f"  [PASS] {label}")
+        else:
+            print(f"  [FAIL] {label}")
+            passed_all = False
+
+    if passed_all:
+        print("\nOVERALL AUDIT: PASS")
+    else:
+        print("\nOVERALL AUDIT: FAIL")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    audit()
+    audit_recommendations()

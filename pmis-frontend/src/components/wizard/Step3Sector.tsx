@@ -39,7 +39,7 @@ export default function Step3Sector() {
         </span>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mb-24">
+      <div className="grid grid-cols-2 gap-3 mb-24">
         {SECTORS.map(sec => {
           const isSelected = sector_interests.includes(sec.name);
           const isDisabled = !isSelected && sector_interests.length >= 3;
@@ -49,7 +49,7 @@ export default function Step3Sector() {
               key={sec.name}
               onClick={() => toggleSector(sec.name)}
               disabled={isDisabled}
-              className={`min-h-[80px] p-4 rounded-xl border-2 transition flex flex-col items-center justify-center text-center gap-2 ${
+              className={`min-h-[80px] p-3 rounded-xl border-2 transition flex flex-col items-center justify-center text-center gap-1 touch-manipulation ${
                 isSelected 
                   ? 'border-success-green bg-green-50 shadow-sm' 
                   : isDisabled 
@@ -57,8 +57,8 @@ export default function Step3Sector() {
                     : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <span className="text-3xl">{sec.icon}</span>
-              <span className={`text-sm font-semibold leading-tight ${isSelected ? 'text-success-green' : 'text-gray-700'}`}>
+              <span className="text-2xl leading-none">{sec.icon}</span>
+              <span className={`text-xs font-semibold leading-tight ${isSelected ? 'text-success-green' : 'text-gray-700'}`}>
                 {sec.name}
               </span>
             </button>

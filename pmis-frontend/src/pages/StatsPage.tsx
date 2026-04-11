@@ -61,11 +61,11 @@ export default function StatsPage({ onBack }: Props) {
   return (
     <div className="min-h-screen bg-gray-50 pb-28 sm:max-w-5xl mx-auto w-full relative font-sans">
       
-      {/* Header */}
       <div className="bg-primary-blue px-6 pt-10 pb-8 shadow-sm">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-white/80 hover:text-white transition font-semibold mb-4"
+          className="flex items-center gap-2 text-white/80 hover:text-white transition font-semibold mb-4 min-h-[44px] touch-manipulation"
+          aria-label="Go back"
         >
           <ArrowLeft className="w-5 h-5" />
           Back
@@ -112,13 +112,12 @@ export default function StatsPage({ onBack }: Props) {
         </div>
 
         {/* ROW 2: Conversion Funnel */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
           <h2 className="text-lg font-bold text-gray-900 mb-6">Application Funnel</h2>
           
-          <div className="relative h-[200px] w-full mt-4 flex items-end">
-            
+          <div className="relative mt-4 w-full">
             {/* Baselines */}
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-x-0 inset-y-0 pointer-events-none hidden sm:block">
                <div className="absolute top-[80%] left-0 right-0 border-t border-dashed border-red-400 z-0">
                   <span className="text-[10px] sm:text-xs font-bold text-red-500 absolute -top-5 right-2 bg-white/80 px-1">Phase 1 Baseline (10.6%)</span>
                </div>
@@ -127,7 +126,8 @@ export default function StatsPage({ onBack }: Props) {
                </div>
             </div>
 
-            <div className="relative w-full h-[160px] flex items-end">
+            {/* Desktop Horizontal SVGs (hidden on mobile) */}
+            <div className="hidden sm:flex relative w-full h-[160px] items-end">
                <svg width="100%" height="100%" preserveAspectRatio="none" className="overflow-visible absolute inset-0 text-gray-800">
                   {/* Trapezoids / Blocks */}
                   {/* Registered */}
@@ -160,6 +160,46 @@ export default function StatsPage({ onBack }: Props) {
                   <text x="76%" y="130" fill="white" fontSize="16" fontWeight="900">{f.joined}</text>
                </svg>
             </div>
+
+            {/* Mobile Vertical SVGs / Layout (visible only on mobile) */}
+            <div className="flex flex-col sm:hidden w-full space-y-4">
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center bg-blue-500 rounded-t-lg p-3 text-white shadow-sm">
+                  <span className="font-bold text-sm">Registered</span>
+                  <span className="font-black text-lg">{f.registered}</span>
+                </div>
+                <div className="flex justify-center items-center py-2 bg-gray-50 border-x border-gray-100">
+                  <span className="text-xs font-bold text-gray-500">↓ {calcDrop(f.applied, f.registered)}% apply</span>
+                </div>
+              </div>
+              
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center bg-sky-500 p-3 text-white shadow-sm w-[90%] mx-auto">
+                  <span className="font-bold text-sm">Applied</span>
+                  <span className="font-black text-lg">{f.applied}</span>
+                </div>
+                <div className="flex justify-center items-center py-2 bg-gray-50 w-[90%] mx-auto border-x border-gray-100">
+                  <span className="text-xs font-bold text-gray-500">↓ {calcDrop(f.accepted, f.applied)}% selected</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center bg-emerald-500 p-3 text-white shadow-sm w-[80%] mx-auto">
+                  <span className="font-bold text-sm">Accepted</span>
+                  <span className="font-black text-lg">{f.accepted}</span>
+                </div>
+                <div className="flex justify-center items-center py-2 bg-gray-50 w-[80%] mx-auto border-x border-gray-100">
+                  <span className="text-xs font-bold text-gray-500">↓ {calcDrop(f.joined, f.accepted)}% join</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center bg-emerald-700 rounded-b-lg p-3 text-white shadow-sm w-[70%] mx-auto">
+                  <span className="font-bold text-sm">Joined</span>
+                  <span className="font-black text-lg">{f.joined}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -171,10 +211,10 @@ export default function StatsPage({ onBack }: Props) {
             <h2 className="text-lg font-bold text-gray-900 mb-4">Top Sectors</h2>
             <div className="flex-1 flex flex-col justify-between space-y-4">
               {getSectors().slice(0, 8).map((sec, i) => (
-                 <div key={i} className="flex flex-col group">
-                    <div className="flex justify-between text-xs font-bold text-gray-700 mb-1">
-                      <span className="truncate pr-2">{sec.sector}</span>
-                      <span>{sec.count} ({sec.percentage}%)</span>
+                 <div key={i} className="flex flex-col group mt-2">
+                    <div className="flex justify-between text-xs font-bold text-gray-700 mb-1 w-full gap-2">
+                      <span className="truncate flex-1 max-w-[140px] sm:max-w-[200px]" title={sec.sector}>{sec.sector}</span>
+                      <span className="whitespace-nowrap shrink-0">{sec.count} ({sec.percentage}%)</span>
                     </div>
                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                        <div 

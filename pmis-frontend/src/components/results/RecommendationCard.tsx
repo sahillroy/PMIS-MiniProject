@@ -119,11 +119,11 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
             <p className="text-sm font-medium text-gray-500 mt-1">{data.role}</p>
           </div>
           
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-2 shrink-0">
             <div className="flex items-center gap-2">
                <button 
                  onClick={toggleBookmark}
-                 className={`p-1.5 rounded-full transition ${bookmarked ? 'text-primary-blue bg-blue-50' : 'text-gray-400 bg-gray-50 hover:text-gray-600 focus:ring-2 focus:ring-primary-blue'}`}
+                 className={`p-1.5 rounded-full transition flex items-center justify-center min-h-[44px] min-w-[44px] ${bookmarked ? 'text-primary-blue bg-blue-50' : 'text-gray-400 bg-gray-50 hover:text-gray-600 focus:ring-2 focus:ring-primary-blue'}`}
                  aria-label={bookmarked ? "Remove bookmark" : "Bookmark this internship"}
                >
                  <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-current' : ''}`} />
@@ -133,7 +133,7 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
                <button 
                  onClick={() => setShowModal(true)}
                  aria-label={`Match breakdown: ${matchPercent}% match`}
-                 className={`w-14 h-14 rounded-full border-4 flex items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue ${badgeColor}`}
+                 className={`w-14 h-14 rounded-full border-4 flex items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue shrink-0 ${badgeColor}`}
                >
                  <div className="text-center mt-0.5">
                    <span className="block text-lg font-black leading-none">{matchPercent}</span>
@@ -284,17 +284,17 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
                 <span className="text-xs font-bold text-gray-500 mb-2 text-center">
                   {t('feedbackQuestion') || 'Was this a good match?'}
                 </span>
-                <div className="grid grid-cols-2 gap-2">
+                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => handleFeedback('positive')}
-                    className="flex items-center justify-center gap-1.5 py-2 px-2 bg-white text-gray-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 border border-gray-200 rounded-lg text-xs font-bold transition"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 bg-white text-gray-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 border border-gray-200 rounded-lg text-xs font-bold transition min-h-[44px]"
                   >
                     <ThumbsUp className="w-3.5 h-3.5" />
                     {t('goodMatch') || 'Yes, good match'}
                   </button>
                   <button 
                     onClick={() => handleFeedback('negative')}
-                    className="flex items-center justify-center gap-1.5 py-2 px-2 bg-white text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-gray-200 rounded-lg text-xs font-bold transition"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 bg-white text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-gray-200 rounded-lg text-xs font-bold transition min-h-[44px]"
                   >
                     <ThumbsDown className="w-3.5 h-3.5" />
                     {t('notForMe') || 'Not for me'}

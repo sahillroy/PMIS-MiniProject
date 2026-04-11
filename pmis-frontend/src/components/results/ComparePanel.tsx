@@ -40,14 +40,14 @@ export default function ComparePanel({ internships, onClose, onApply }: Props) {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center animate-in slide-in-from-bottom-full duration-300">
+    <div className="fixed inset-0 sm:inset-x-0 sm:bottom-0 z-50 flex justify-center animate-in slide-in-from-bottom-full duration-300">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm -z-10" onClick={onClose} aria-hidden="true" />
       
       <div 
         ref={panelRef}
         tabIndex={-1}
-        className="bg-white w-full max-w-4xl rounded-t-3xl shadow-2xl overflow-hidden focus:outline-none max-h-[90vh] flex flex-col"
+        className="bg-white w-full sm:max-w-4xl sm:rounded-t-3xl shadow-2xl overflow-hidden focus:outline-none h-full sm:max-h-[90vh] flex flex-col"
         role="dialog"
         aria-label="Compare Internships"
       >

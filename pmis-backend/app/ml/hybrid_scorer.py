@@ -158,8 +158,10 @@ class HybridScorer:
 
             reasons = cb['reasons'].copy()
             reasons['affirmative_action'] = boost_breakdown
+            reasons['affirmative_boosts_applied'] = boost_breakdown.get('affirmative_boosts_applied', [])
             reasons['confidence'] = {
-                "band":  f"{confidence['confidence_lower']}–{confidence['confidence_upper']}%",
+                "confidence_lower":  confidence['confidence_lower'],
+                "confidence_upper":  confidence['confidence_upper'],
                 "note":  confidence['confidence_note'],
                 "label": confidence['scoring_mode_label'],
             }
