@@ -1,12 +1,12 @@
 """
 PMIS Content-Based Recommender
 ================================
-Enhancements in this version:
-  - SKILL_SYNONYMS: normalises aliases ("JS" → "javascript", "Accounts" → "accounting")
-  - CANONICAL_FORMS: maps normalised keys back to display-friendly strings
-  - normalize_skills(): applied to both candidate and internship skills before TF-IDF
-  - get_skill_display_name(): returns the display name for any raw or normalised skill
-  - All reasons dicts use canonical display names for matched/missing skills
+Features:
+  - SKILL_SYNONYMS / CANONICAL_FORMS: alias normalisation + display names
+  - normalize_skills(): applied to candidate and internship skills before TF-IDF
+  - get_skill_display_name(): public helper for callers
+  - min_stipend: pre-filter with 80% relaxation fallback + stipend_note in reasons
+  - Three-tier SECTOR_ALIASES matching (exact → alias → partial credit)
 """
 
 import json
@@ -15,9 +15,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from app.models import db, Candidate, Internship
 
 # ─── Skill Synonym Map ────────────────────────────────────────────────────────
-# Keys are lowercase variants; values are the normalised canonical key.
 SKILL_SYNONYMS: dict[str, str] = {
-    # JavaScript / web
     "js":                              "javascript",
     "node":                            "nodejs",
     "node.js":                         "nodejs",
@@ -26,105 +24,85 @@ SKILL_SYNONYMS: dict[str, str] = {
     "vue.js":                          "vue",
     "vuejs":                           "vue",
     "angular.js":                      "angular",
-    # AI / ML
     "ml":                              "machine learning",
     "ai":                              "artificial intelligence",
     "dl":                              "deep learning",
     "nlp":                             "natural language processing",
-    # Office / productivity
     "ms office":                       "microsoft office",
     "msoffice":                        "microsoft office",
     "ms-office":                       "microsoft office",
     "ms word":                         "microsoft office",
     "ms excel":                        "excel",
-    # Systems / low-level
     "c++":                             "cpp",
     "c plus plus":                     "cpp",
-    # DSA
     "data structures":                 "dsa",
     "data structures and algorithms":  "dsa",
-    # Accounting / Finance
     "tally erp":                       "tally",
     "tally erp 9":                     "tally",
     "accounts":                        "accounting",
     "bookkeeping":                     "accounting",
     "financial modelling":             "financial analysis",
-    # Design
     "adobe photoshop":                 "photoshop",
     "adobe illustrator":               "illustrator",
     "google analytics":                "analytics",
-    # Marketing / Content
     "social media marketing":          "social media",
     "content creation":                "content writing",
-    # Customer-facing
     "customer support":                "customer service",
-    # Communication
     "spoken english":                  "english speaking",
     "communication skills":            "communication",
-    # Engineering / CAD
     "auto cad":                        "autocad",
-    # Driving
     "driving license":                 "driving licence",
 }
 
 # ─── Canonical Display Forms ──────────────────────────────────────────────────
-# Maps normalised (lowercase) key → display-friendly string shown in the UI / reasons.
 CANONICAL_FORMS: dict[str, str] = {
-    # Web / Programming
-    "javascript":                "JavaScript",
-    "nodejs":                    "Node.js",
-    "react":                     "React",
-    "vue":                       "Vue.js",
-    "angular":                   "Angular",
-    "python":                    "Python",
-    "java":                      "Java",
-    "cpp":                       "C++",
-    "c++":                       "C++",
-    "sql":                       "SQL",
-    "dsa":                       "Data Structures & Algorithms",
-    # AI / ML
-    "machine learning":          "Machine Learning",
-    "artificial intelligence":   "Artificial Intelligence",
-    "deep learning":             "Deep Learning",
+    "javascript":                  "JavaScript",
+    "nodejs":                      "Node.js",
+    "react":                       "React",
+    "vue":                         "Vue.js",
+    "angular":                     "Angular",
+    "python":                      "Python",
+    "java":                        "Java",
+    "cpp":                         "C++",
+    "c++":                         "C++",
+    "sql":                         "SQL",
+    "dsa":                         "Data Structures & Algorithms",
+    "machine learning":            "Machine Learning",
+    "artificial intelligence":     "Artificial Intelligence",
+    "deep learning":               "Deep Learning",
     "natural language processing": "Natural Language Processing",
-    "data analysis":             "Data Analysis",
-    # Office / Tools
-    "microsoft office":          "MS Office",
-    "excel":                     "Excel",
-    "tally":                     "Tally",
-    "autocad":                   "AutoCAD",
-    # Finance / Accounting
-    "accounting":                "Accounting",
-    "financial analysis":        "Financial Analysis",
-    # Design / Media
-    "photoshop":                 "Adobe Photoshop",
-    "illustrator":               "Adobe Illustrator",
-    "graphic design":            "Graphic Design",
-    "video editing":             "Video Editing",
-    "web design":                "Web Design",
-    "analytics":                 "Google Analytics",
-    # Marketing / Content
-    "social media":              "Social Media",
-    "content writing":           "Content Writing",
-    "seo":                       "SEO",
-    # Communication / Customer
-    "communication":             "Communication",
-    "customer service":          "Customer Service",
-    "english speaking":          "English Speaking",
-    "sales":                     "Sales",
-    "hr management":             "HR Management",
-    # Field / Technical
-    "driving licence":           "Driving Licence",
-    "electrical work":           "Electrical Work",
-    "mechanical":                "Mechanical",
-    "welding":                   "Welding",
-    "supply chain":              "Supply Chain",
-    "inventory management":      "Inventory Management",
-    "network administration":    "Network Administration",
-    "cybersecurity":             "Cybersecurity",
-    "data entry":                "Data Entry",
-    "computer basics":           "Computer Basics",
-    "legal research":            "Legal Research",
+    "data analysis":               "Data Analysis",
+    "microsoft office":            "MS Office",
+    "excel":                       "Excel",
+    "tally":                       "Tally",
+    "autocad":                     "AutoCAD",
+    "accounting":                  "Accounting",
+    "financial analysis":          "Financial Analysis",
+    "photoshop":                   "Adobe Photoshop",
+    "illustrator":                 "Adobe Illustrator",
+    "graphic design":              "Graphic Design",
+    "video editing":               "Video Editing",
+    "web design":                  "Web Design",
+    "analytics":                   "Google Analytics",
+    "social media":                "Social Media",
+    "content writing":             "Content Writing",
+    "seo":                         "SEO",
+    "communication":               "Communication",
+    "customer service":            "Customer Service",
+    "english speaking":            "English Speaking",
+    "sales":                       "Sales",
+    "hr management":               "HR Management",
+    "driving licence":             "Driving Licence",
+    "electrical work":             "Electrical Work",
+    "mechanical":                  "Mechanical",
+    "welding":                     "Welding",
+    "supply chain":                "Supply Chain",
+    "inventory management":        "Inventory Management",
+    "network administration":      "Network Administration",
+    "cybersecurity":               "Cybersecurity",
+    "data entry":                  "Data Entry",
+    "computer basics":             "Computer Basics",
+    "legal research":              "Legal Research",
 }
 
 # ─── Sector Aliases ───────────────────────────────────────────────────────────
@@ -148,24 +126,16 @@ SECTOR_ALIASES: dict[str, list[str]] = {
     "Automobile":     ["Automobile", "Automotive", "Manufacturing"],
 }
 
-# Reverse map: DB sector value → canonical alias keys
 _REVERSE_ALIAS: dict[str, list[str]] = {}
 for _key, _vals in SECTOR_ALIASES.items():
     for _v in _vals:
         _REVERSE_ALIAS.setdefault(_v, []).append(_key)
 
 
-# ─── Public Helpers ───────────────────────────────────────────────────────────
+# ─── Public helpers ───────────────────────────────────────────────────────────
 
 def normalize_skills(skills: list) -> list[str]:
-    """
-    Normalise a list of skill strings:
-      1. Lowercase + strip
-      2. Apply SKILL_SYNONYMS lookup
-      3. Deduplicate (preserving first-seen order)
-
-    Returns a deduplicated list of normalised (lowercase) skill keys.
-    """
+    """Lowercase, synonym-map, and deduplicate a list of skill strings."""
     if not skills:
         return []
     seen: set[str] = set()
@@ -174,7 +144,7 @@ def normalize_skills(skills: list) -> list[str]:
         if not raw:
             continue
         key = str(raw).lower().strip()
-        key = SKILL_SYNONYMS.get(key, key)   # apply synonym map
+        key = SKILL_SYNONYMS.get(key, key)
         if key not in seen:
             seen.add(key)
             result.append(key)
@@ -186,42 +156,41 @@ def get_skill_display_name(skill: str) -> str:
     if not skill:
         return skill
     key = str(skill).lower().strip()
-    key = SKILL_SYNONYMS.get(key, key)      # normalise first
-    return CANONICAL_FORMS.get(key, skill)  # display form or original
+    key = SKILL_SYNONYMS.get(key, key)
+    return CANONICAL_FORMS.get(key, skill)
 
 
 def _to_display(skills: list[str]) -> list[str]:
-    """Map a list of normalised skill keys to their display names."""
     return [get_skill_display_name(s) for s in skills]
 
 
-# ─── Recommender ──────────────────────────────────────────────────────────────
+# ─── Recommender class ────────────────────────────────────────────────────────
 
 class ContentBasedRecommender:
     def __init__(self):
         self.vectorizer = TfidfVectorizer(stop_words='english', lowercase=True)
         self.education_hierarchy = {
             '10th': 1, '12th': 2, 'ITI': 3, 'Diploma': 4,
-            'Graduate': 5, 'Postgraduate': 6
+            'Graduate': 5, 'Postgraduate': 6,
         }
         self.sector_relations = {
-            'IT/Software':    ['Telecommunications', 'E-commerce', 'Media'],
-            'Manufacturing':  ['Automotive', 'Logistics', 'Food Processing'],
-            'Healthcare':     ['Pharmaceuticals', 'NGO/Social Work'],
-            'Retail':         ['E-commerce', 'FMCG'],
-            'Agriculture':    ['Food Processing'],
-            'Education':      ['NGO/Social Work'],
-            'Finance/Banking':['Real Estate'],
-            'Tourism':        ['Hospitality', 'Aviation'],
+            'IT/Software':     ['Telecommunications', 'E-commerce', 'Media'],
+            'Manufacturing':   ['Automotive', 'Logistics', 'Food Processing'],
+            'Healthcare':      ['Pharmaceuticals', 'NGO/Social Work'],
+            'Retail':          ['E-commerce', 'FMCG'],
+            'Agriculture':     ['Food Processing'],
+            'Education':       ['NGO/Social Work'],
+            'Finance/Banking': ['Real Estate'],
+            'Tourism':         ['Hospitality', 'Aviation'],
         }
         self.internships_data: list[dict] = []
         self.internship_tfidf = None
         self._is_loaded = False
 
-    # ── Internal parsers ──────────────────────────────────────────────────────
+    # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _parse_skills(self, field) -> list[str]:
-        """Safely coerce JSON column value to a plain Python list."""
+        """Safely coerce a DB JSON column value to a plain Python list."""
         if field is None:
             return []
         if isinstance(field, list):
@@ -240,30 +209,27 @@ class ContentBasedRecommender:
     # ── DB loader ─────────────────────────────────────────────────────────────
 
     def load_internships(self):
-        """Load all active internships, normalise their skills, build TF-IDF matrix."""
+        """Pull all active internships, normalise skills, build TF-IDF matrix."""
         internships = Internship.query.filter_by(is_active=True).all()
         self.internships_data = []
 
         for i in internships:
-            raw_skills   = self._parse_skills(i.required_skills)
-            norm_skills  = normalize_skills(raw_skills)           # ← normalise here
-            skills_str   = " ".join(norm_skills)
-
+            raw_skills  = self._parse_skills(i.required_skills)
+            norm_skills = normalize_skills(raw_skills)
             self.internships_data.append({
-                'id':             i.id,
-                'company':        i.company,
-                'role':           i.role,
-                'sector':         i.sector,
-                'required_skills_raw':  raw_skills,    # original strings for display if needed
-                'required_skills':      norm_skills,   # normalised — used for matching
-                'skills_text':    skills_str,
-                'min_education':  i.min_education,
+                'id':              i.id,
+                'company':         i.company,
+                'role':            i.role,
+                'sector':          i.sector,
+                'required_skills': norm_skills,
+                'skills_text':     " ".join(norm_skills),
+                'min_education':   i.min_education,
                 'preferred_field': i.preferred_field,
-                'location_state': i.location_state,
-                'location_city':  getattr(i, 'location_city', ''),
+                'location_state':  i.location_state,
+                'location_city':   getattr(i, 'location_city', ''),
                 'stipend_monthly': getattr(i, 'stipend_monthly', 0),
-                'total_slots':    i.total_slots,
-                'filled_slots':   i.filled_slots,
+                'total_slots':     i.total_slots,
+                'filled_slots':    i.filled_slots,
             })
 
         corpus = [d['skills_text'] for d in self.internships_data]
@@ -271,37 +237,26 @@ class ContentBasedRecommender:
             self.internship_tfidf = self.vectorizer.fit_transform(corpus)
         else:
             self.internship_tfidf = None
-
         self._is_loaded = True
 
     # ── Scoring helpers ───────────────────────────────────────────────────────
 
-    def _calculate_skill_match(self, candidate_skills_raw, internship_dict: dict, index: int):
-        """
-        Returns (cosine_similarity, matched_display, missing_display).
-        Candidate skills are normalised before comparison.
-        Display names use CANONICAL_FORMS.
-        """
-        c_norm = normalize_skills(self._parse_skills(candidate_skills_raw))
-        i_norm = internship_dict['required_skills']   # already normalised at load time
-
-        if not c_norm or not i_norm:
+    def _calculate_skill_match(self, cand_norm: list[str], internship: dict, index: int):
+        i_norm = internship['required_skills']
+        if not cand_norm or not i_norm:
             return 0.0, [], _to_display(i_norm)
 
-        cand_str    = " ".join(c_norm)
-        cand_vector = self.vectorizer.transform([cand_str])
-
+        cand_vector = self.vectorizer.transform([" ".join(cand_norm)])
         if self.internship_tfidf is not None:
             similarity = cosine_similarity(
-                cand_vector, self.internship_tfidf[index:index+1]
+                cand_vector, self.internship_tfidf[index:index + 1]
             )[0][0]
         else:
             similarity = 0.0
 
-        cand_set = set(c_norm)
+        cand_set = set(cand_norm)
         matched  = [s for s in i_norm if s in cand_set]
         missing  = [s for s in i_norm if s not in cand_set]
-
         return float(similarity), _to_display(matched), _to_display(missing)
 
     def _calculate_education_match(self, cand_edu: str, req_edu: str):
@@ -309,33 +264,26 @@ class ContentBasedRecommender:
             return 1.0, "No specific education required"
         if not cand_edu:
             return 0.0, "Candidate education not provided"
-        cand_level = self.education_hierarchy.get(cand_edu, 0)
-        req_level  = self.education_hierarchy.get(req_edu, 0)
-        if cand_level >= req_level:
+        cl = self.education_hierarchy.get(cand_edu, 0)
+        rl = self.education_hierarchy.get(req_edu, 0)
+        if cl >= rl:
             return 1.0, f"{cand_edu} meets or exceeds {req_edu} requirement"
-        elif cand_level == req_level - 1:
+        elif cl == rl - 1:
             return 0.5, f"{cand_edu} is one level below {req_edu} requirement"
-        else:
-            return 0.0, f"{cand_edu} is significantly below {req_edu} requirement"
+        return 0.0, f"{cand_edu} is significantly below {req_edu} requirement"
 
     def _calculate_sector_match(self, cand_sectors_raw, req_sector: str):
-        """
-        Three-tier matching:
-          Tier 1 — exact string
-          Tier 2 — SECTOR_ALIASES lookup (handles "IT" ↔ "IT/Software" etc.)
-          Tier 3 — legacy sector_relations partial credit (0.5)
-        """
         if not req_sector:
             return 1.0, "Internship has no specific sector."
         c_sectors = self._parse_skills(cand_sectors_raw)
         if not c_sectors:
             return 0.0, "No candidate sector preferences matched."
 
-        # Tier 1
+        # Tier 1 — exact
         if req_sector in c_sectors:
             return 1.0, f"{req_sector} sector exactly matches your interests."
 
-        # Tier 2 — reverse alias: does req_sector map to any canonical key the candidate listed?
+        # Tier 2 — alias
         for ck in _REVERSE_ALIAS.get(req_sector, []):
             if ck in c_sectors:
                 return 1.0, f"{req_sector} sector matches your {ck} interest."
@@ -343,7 +291,7 @@ class ContentBasedRecommender:
             if req_sector in SECTOR_ALIASES.get(cs, []):
                 return 1.0, f"{req_sector} sector matches your {cs} interest."
 
-        # Tier 3
+        # Tier 3 — legacy partial credit
         related = self.sector_relations.get(req_sector, [])
         for cs in c_sectors:
             if cs in related or req_sector in self.sector_relations.get(cs, []):
@@ -361,15 +309,30 @@ class ContentBasedRecommender:
         return 0.3, f"Located in {req_state}, different from {cand_state}."
 
     def _calculate_capacity_check(self, total: int, filled: int):
-        if not total or total <= 0:
-            return 0.0, 0
-        if filled >= total:
+        if not total or total <= 0 or filled >= total:
             return 0.0, 0
         return float((total - filled) / total), (total - filled)
 
-    # ── Main recommend() — signature unchanged ────────────────────────────────
+    # ── Main entry point ──────────────────────────────────────────────────────
 
-    def recommend(self, candidate_id, top_n=5, candidate_obj=None) -> list[dict]:
+    def recommend(
+        self,
+        candidate_id=None,
+        candidate_obj=None,
+        top_n: int = 5,
+        min_stipend: int = 0,
+    ) -> list[dict]:
+        """
+        Parameters
+        ----------
+        candidate_id  : int | None  — DB id for saved candidates
+        candidate_obj : Candidate   — transient object for anonymous flows
+        top_n         : int         — max results
+        min_stipend   : int         — monthly stipend floor (0 = no filter).
+                        If no internships meet the floor, relaxes to 80% and
+                        includes a stipend_warning on every result.
+                        stipend_note added to reasons dict only when > 0.
+        """
         if not self._is_loaded:
             self.load_internships()
 
@@ -377,34 +340,50 @@ class ContentBasedRecommender:
         if not candidate:
             return []
 
-        # Normalise candidate skills once up-front
-        cand_skills_norm = normalize_skills(self._parse_skills(candidate.skills))
+        # ── Stipend pre-filter ────────────────────────────────────────────────
+        stipend_warning: str | None = None
+        if min_stipend > 0:
+            work_pool = [i for i in self.internships_data if i['stipend_monthly'] >= min_stipend]
+            if not work_pool:
+                relaxed   = int(min_stipend * 0.8)
+                work_pool = [i for i in self.internships_data if i['stipend_monthly'] >= relaxed]
+                stipend_warning = (
+                    f"No internships found above \u20b9{min_stipend:,}/month. "
+                    f"Showing results above \u20b9{relaxed:,}/month instead."
+                )
+        else:
+            work_pool = self.internships_data
+
+        # Keep original TF-IDF row indices aligned with work_pool items
+        pool_with_indices = [
+            (orig_idx, item)
+            for orig_idx, item in enumerate(self.internships_data)
+            if item in work_pool
+        ]
+
+        # Normalise candidate skills once
+        cand_norm = normalize_skills(self._parse_skills(candidate.skills))
 
         recommendations: list[dict] = []
 
-        for idx, internship in enumerate(self.internships_data):
-            # 1. Skill Match (35%) — pass normalised list so _calculate_skill_match
-            #    doesn't double-normalise; still safe because _parse_skills([...]) = [...]
-            skill_score, matched_display, missing_display = self._calculate_skill_match(
-                cand_skills_norm, internship, idx
+        for orig_idx, internship in pool_with_indices:
+            # 1. Skill (35%)
+            skill_score, matched, missing = self._calculate_skill_match(
+                cand_norm, internship, orig_idx
             )
-
-            # 2. Education Match (25%)
+            # 2. Education (25%)
             edu_score, edu_reason = self._calculate_education_match(
                 candidate.education_level, internship['min_education']
             )
-
-            # 3. Sector Match (20%)
+            # 3. Sector (20%)
             sector_score, sector_reason = self._calculate_sector_match(
                 candidate.sector_interests, internship['sector']
             )
-
-            # 4. Location Match (15%)
+            # 4. Location (15%)
             loc_score, loc_reason = self._calculate_location_match(
                 candidate.state, internship['location_state']
             )
-
-            # 5. Capacity check (5%)
+            # 5. Capacity (5%)
             cap_score, slots_avail = self._calculate_capacity_check(
                 internship['total_slots'], internship['filled_slots']
             )
@@ -420,12 +399,11 @@ class ContentBasedRecommender:
                 cap_score    * 0.05
             )
 
-            # reasons dict — structure unchanged, display names used for skills
-            reasons = {
+            reasons: dict = {
                 "skill_match": {
                     "score":          round(skill_score, 2),
-                    "matched_skills": matched_display,   # canonical display names
-                    "missing_skills": missing_display,   # canonical display names
+                    "matched_skills": matched,
+                    "missing_skills": missing,
                 },
                 "education_match": {
                     "score":  round(edu_score, 2),
@@ -445,17 +423,39 @@ class ContentBasedRecommender:
                 },
             }
 
-            recommendations.append({
+            stipend         = internship['stipend_monthly']
+            min_stipend_met: bool | None = None
+
+            if min_stipend > 0:
+                min_stipend_met = stipend >= min_stipend
+                if min_stipend_met:
+                    reasons['stipend_note'] = {
+                        "score": 1.0,
+                        "note":  f"\u20b9{stipend:,}/month meets your \u20b9{min_stipend:,} minimum",
+                    }
+                else:
+                    reasons['stipend_note'] = {
+                        "score": 0.8,
+                        "note":  f"\u20b9{stipend:,}/month slightly below your \u20b9{min_stipend:,} preference",
+                    }
+
+            result: dict = {
                 "internship_id":   internship['id'],
                 "company":         internship['company'],
                 "role":            internship['role'],
                 "sector":          internship['sector'],
-                "required_skills": _to_display(internship['required_skills']),  # display names
+                "required_skills": _to_display(internship['required_skills']),
                 "location_state":  internship['location_state'],
-                "stipend_monthly": internship['stipend_monthly'],
+                "stipend_monthly": stipend,
                 "final_score":     round(final_score, 4),
                 "reasons":         reasons,
-            })
+            }
+            if min_stipend_met is not None:
+                result['min_stipend_met'] = min_stipend_met
+            if stipend_warning:
+                result['stipend_warning'] = stipend_warning
+
+            recommendations.append(result)
 
         recommendations.sort(key=lambda x: x['final_score'], reverse=True)
         return recommendations[:top_n]
