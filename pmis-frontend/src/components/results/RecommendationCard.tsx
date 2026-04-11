@@ -5,8 +5,9 @@ import { useProfileStore } from '../../store/profileStore';
 import type { Recommendation } from '../../types';
 import MatchBreakdown from './MatchBreakdown';
 import SkillChart from './SkillChart';
-import { MapPin, IndianRupee, GraduationCap, Users, Info, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Bookmark, MapPin, IndianRupee, GraduationCap, Users, Info, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useBookmarkStore } from '../../store/bookmarkStore';
 
 interface Props {
   data: Recommendation;
@@ -29,6 +30,18 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
   const incrementSessionFeedbackCount = useProfileStore(state => state.incrementSessionFeedbackCount);
   const [feedbackState, setFeedbackState] = useState<'none' | 'loading' | 'success' | 'done'>('none');
   const [feedbackType, setFeedbackType] = useState<'positive' | 'negative' | null>(null);
+
+  // Bookmark State
+  const { addBookmark, removeBookmark, isBookmarked } = useBookmarkStore();
+  const bookmarked = isBookmarked(data.internship_id);
+  
+  const toggleBookmark = () => {
+    if (bookmarked) {
+      removeBookmark(data.internship_id);
+    } else {
+      addBookmark(data);
+    }
+  };
 
   const matchPercent = data.match_percentage;
   const badgeColor = matchPercent >= 75 ? 'text-success-green border-success-green bg-green-50' : matchPercent >= 50 ? 'text-amber-600 border-amber-600 bg-amber-50' : 'text-gray-500 border-gray-400 bg-gray-50';
@@ -106,18 +119,28 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
             <p className="text-sm font-medium text-gray-500 mt-1">{data.role}</p>
           </div>
           
-          <div className="flex flex-col items-end">
-            {/* Match Percentage Badge */}
-            <button 
-              onClick={() => setShowModal(true)}
-              aria-label={`Match breakdown: ${matchPercent}% match`}
-              className={`w-14 h-14 rounded-full border-4 flex items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue ${badgeColor}`}
-            >
-              <div className="text-center mt-0.5">
-                <span className="block text-lg font-black leading-none">{matchPercent}</span>
-                <span className="block text-[8px] font-bold uppercase tracking-wide opacity-80 mt-0.5">%</span>
-              </div>
-            </button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+               <button 
+                 onClick={toggleBookmark}
+                 className={`p-1.5 rounded-full transition ${bookmarked ? 'text-primary-blue bg-blue-50' : 'text-gray-400 bg-gray-50 hover:text-gray-600 focus:ring-2 focus:ring-primary-blue'}`}
+                 aria-label={bookmarked ? "Remove bookmark" : "Bookmark this internship"}
+               >
+                 <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-current' : ''}`} />
+               </button>
+               
+               {/* Match Percentage Badge */}
+               <button 
+                 onClick={() => setShowModal(true)}
+                 aria-label={`Match breakdown: ${matchPercent}% match`}
+                 className={`w-14 h-14 rounded-full border-4 flex items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue ${badgeColor}`}
+               >
+                 <div className="text-center mt-0.5">
+                   <span className="block text-lg font-black leading-none">{matchPercent}</span>
+                   <span className="block text-[8px] font-bold uppercase tracking-wide opacity-80 mt-0.5">%</span>
+                 </div>
+               </button>
+            </div>
             
             {/* Phase 3 Slot 2: Confidence Area */}
             {data.confidence && (
