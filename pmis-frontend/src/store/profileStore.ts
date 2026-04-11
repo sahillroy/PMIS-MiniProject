@@ -63,9 +63,9 @@ export const useProfileStore = create<ProfileStore>()(
       prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
       
       loadDemoProfile: () => set({
-        education_level: '12th Pass',
+        education_level: '12th',           // matches DB enum: 10th|12th|ITI|Diploma|Graduate
         field_of_study: 'Arts',
-        skills: ['Communication', 'Data Entry'],
+        skills: ['Communication', 'Data Entry', 'MS Office'],
         sector_interests: ['Retail', 'Agriculture'],
         preferred_state: 'Maharashtra',
         open_to_pan_india: false,

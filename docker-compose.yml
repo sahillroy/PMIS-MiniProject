@@ -1,43 +1,38 @@
-version: "3.9"
+version: "3.8"
 
 services:
   flask-api:
-    build: ./pmis-backend
+    build:
+      context: ./pmis-backend
+      dockerfile: Dockerfile
+    container_name: pmis-backend
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=${FLASK_ENV:-development}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///pmis.db}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-prod}
+      - FLASK_ENV=production
+      # Use absolute path inside container so config.py and seed script agree
+      - DATABASE_URL=sqlite:////app/pmis.db
+      - SECRET_KEY=super-secret-key
     volumes:
-      - ./pmis-backend:/app
-      - sqlite_data:/app/instance
-    depends_on:
-      - redis
+      # Persist the SQLite DB between container restarts
+      - pmis_db:/app
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
-    image: node:18-alpine
-    working_dir: /app
+    build:
+      context: ./pmis-frontend
+      dockerfile: Dockerfile
+    container_name: pmis-frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./pmis-frontend:/app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
-    environment:
-      - VITE_API_URL=http://localhost:5000/api/v1
+      - "5173:80"
     depends_on:
       - flask-api
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
     restart: unless-stopped
 
 volumes:
-  sqlite_data:
-  redis_data:
+  pmis_db:
