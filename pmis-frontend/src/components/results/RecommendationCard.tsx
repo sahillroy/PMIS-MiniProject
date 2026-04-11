@@ -9,9 +9,13 @@ import { useTranslation } from 'react-i18next';
 interface Props {
   data: Recommendation;
   index?: number;
+  compareMode?: boolean;
+  isSelected?: boolean;
+  canSelectMore?: boolean;
+  onSelectToggle?: () => void;
 }
 
-export default function RecommendationCard({ data, index }: Props) {
+export default function RecommendationCard({ data, index, compareMode, isSelected, canSelectMore, onSelectToggle }: Props) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -49,6 +53,18 @@ export default function RecommendationCard({ data, index }: Props) {
       <div className="p-5">
         {/* Header Block */}
         <div className="flex justify-between items-start mb-4 gap-2">
+          {compareMode && (
+             <div className="mt-1 mr-1 shrink-0">
+               <input 
+                 type="checkbox" 
+                 checked={isSelected}
+                 onChange={onSelectToggle}
+                 disabled={!isSelected && !canSelectMore}
+                 aria-label="Select for comparison"
+                 className="w-5 h-5 rounded border-gray-300 text-primary-blue focus:ring-primary-blue cursor-pointer"
+               />
+             </div>
+          )}
           <div className="flex-1">
             <div className="inline-block px-3 py-1 bg-blue-50 text-primary-blue text-xs font-bold rounded-full mb-2 border border-blue-100">
               {data.sector}

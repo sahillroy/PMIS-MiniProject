@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useProfileStore } from '../store/profileStore';
 import { useRecommendations } from '../hooks/useRecommendations';
 import RecommendationCard from '../components/results/RecommendationCard';
+import ComparePanel from '../components/results/ComparePanel';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
@@ -23,7 +24,6 @@ const FALLBACK_PROFILE = {
 export default function ResultsPage({ onSearchAgain }: Props) {
   const { t, i18n } = useTranslation();
   
-  // Use fallback verification check on render
   const profileStore = useProfileStore();
   const activeProfile = profileStore.skills.length > 0 ? profileStore : FALLBACK_PROFILE;
   
@@ -31,6 +31,11 @@ export default function ResultsPage({ onSearchAgain }: Props) {
   
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState(t('analysing'));
+
+  // Compare mode states
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   useEffect(() => {
     if (isLoading) {
@@ -44,7 +49,15 @@ export default function ResultsPage({ onSearchAgain }: Props) {
       setProgress(100);
       setLoadingText("Done");
     }
-  }, [isLoading]);
+  }, [isLoading, t]);
+
+  const toggleCompareSelection = (id: string) => {
+    setSelectedForCompare(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length < 2) return [...prev, id];
+      return prev;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28 max-w-md mx-auto shadow-xl relative font-sans">
@@ -60,9 +73,23 @@ export default function ResultsPage({ onSearchAgain }: Props) {
         <h1 className="text-2xl font-bold text-white mb-1 relative z-10 mt-2">
           {activeProfile.name ? `${activeProfile.name} - ${t('your_results')}` : t('your_results')}
         </h1>
-        <p className="text-blue-100 font-medium tracking-wide text-sm relative z-10">
-          {isLoading ? loadingText : t('top_matches')}
-        </p>
+        
+        <div className="flex justify-between items-center relative z-10">
+          <p className="text-blue-100 font-medium tracking-wide text-sm">
+            {isLoading ? loadingText : (compareMode ? (t('compareBtnLabel')?.replace(/\d+.*$/, 'Select 2') || 'Select 2 to compare') : t('top_matches'))}
+          </p>
+          {!isLoading && !error && recommendations.length > 1 && (
+            <button 
+              onClick={() => {
+                setCompareMode(!compareMode);
+                if (compareMode) setSelectedForCompare([]);
+              }}
+              className={`text-xs font-bold px-2.5 py-1 rounded-md border transition-colors ${compareMode ? 'bg-white/20 border-white/40 text-white hover:bg-white/30' : 'bg-white/10 border-white/20 text-blue-100 hover:bg-white/20 hover:text-white'}`}
+            >
+              {compareMode ? 'Cancel' : t('compareMode') || 'Compare'}
+            </button>
+          )}
+        </div>
 
         {/* Loading Progress Bar */}
         {isLoading && (
@@ -114,20 +141,51 @@ export default function ResultsPage({ onSearchAgain }: Props) {
         )}
 
         {!isLoading && !error && recommendations.map((rec, index) => (
-          <RecommendationCard key={rec.internship_id} data={rec} index={index} />
+          <RecommendationCard 
+            key={rec.internship_id} 
+            data={rec} 
+            index={index} 
+            compareMode={compareMode}
+            isSelected={selectedForCompare.includes(rec.internship_id)}
+            canSelectMore={selectedForCompare.length < 2}
+            onSelectToggle={() => toggleCompareSelection(rec.internship_id)}
+          />
         ))}
       </div>
 
       {!isLoading && (
-         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20">
-          <button 
-            onClick={onSearchAgain}
-            aria-label={t('refine_search')}
-            className="w-full min-h-[56px] rounded-xl font-bold text-lg text-primary-blue border-2 border-primary-blue transition hover:bg-blue-50 bg-white"
-          >
-            {t('refine_search')}
-          </button>
-        </div>
+        <>
+          {compareMode && selectedForCompare.length === 2 && (
+             <div className="fixed bottom-[84px] left-0 right-0 max-w-md mx-auto px-4 z-30 animate-in slide-in-from-bottom-5">
+                <button 
+                  onClick={() => setCompareOpen(true)}
+                  className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition flex justify-center items-center gap-2"
+                >
+                  {t('compareBtnLabel') || 'Compare 2 selected'} &rarr;
+                </button>
+             </div>
+          )}
+
+          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20">
+            <button 
+              onClick={onSearchAgain}
+              aria-label={t('refine_search')}
+              className="w-full min-h-[56px] rounded-xl font-bold text-lg text-primary-blue border-2 border-primary-blue transition hover:bg-blue-50 bg-white"
+            >
+              {t('refine_search')}
+            </button>
+          </div>
+        </>
+      )}
+
+      {compareOpen && (
+        <ComparePanel 
+           internships={recommendations.filter(r => selectedForCompare.includes(r.internship_id))}
+           onClose={() => setCompareOpen(false)}
+           onApply={(id) => {
+             console.log("Applying to", id, "from compare mode");
+           }}
+        />
       )}
     </div>
   );

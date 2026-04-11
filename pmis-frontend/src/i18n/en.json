@@ -16,5 +16,8 @@
   "learn_skill_india": "Learn on Skill India Digital",
   "match_range_label": "Expected Range",
   "below_preference": "Below your preference",
-  "free_course": "Free Course"
+  "free_course": "Free Course",
+  "compareMode": "Compare mode",
+  "compareBtnLabel": "Compare 2 selected",
+  "closeCompare": "Close comparison"
 }

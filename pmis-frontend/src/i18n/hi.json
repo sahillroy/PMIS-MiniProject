@@ -16,5 +16,8 @@
   "learn_skill_india": "स्किल इंडिया डिजिटल पर सीखें",
   "match_range_label": "अनुमानित सीमा",
   "below_preference": "आपकी पसंद से कम",
-  "free_course": "मुफ्त कोर्स"
+  "free_course": "मुफ्त कोर्स",
+  "compareMode": "तुलना मोड",
+  "compareBtnLabel": "2 चुने हुए की तुलना करें",
+  "closeCompare": "तुलना बंद करें"
 }
