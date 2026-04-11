@@ -34,12 +34,14 @@ def create_app():
     from app.routes.internships import internships_bp
     from app.routes.apply import apply_bp
     from app.routes.stats import stats_bp
+    from app.routes.debug import debug_bp
 
     app.register_blueprint(recommend_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(internships_bp)
     app.register_blueprint(apply_bp)
     app.register_blueprint(stats_bp)
+    app.register_blueprint(debug_bp)
 
     @app.route('/api/v1/health')
     def health():

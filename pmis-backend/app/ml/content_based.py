@@ -4,6 +4,34 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from app.models import db, Candidate, Internship
 
+# Canonical sector aliases — maps a "short" interest label to all equivalent DB values
+SECTOR_ALIASES = {
+    "IT":             ["IT/Software", "IT & Technology", "Software", "Technology",
+                       "Telecom", "Telecommunications", "E-commerce"],
+    "Banking":        ["Finance/Banking", "Banking & Finance", "Finance", "BFSI", "Banking"],
+    "Finance":        ["Finance/Banking", "Banking & Finance", "Finance", "BFSI", "Banking"],
+    "Manufacturing":  ["Manufacturing", "Automotive", "Automobile", "Industrial"],
+    "Healthcare":     ["Healthcare", "Pharmaceuticals", "Medical", "Pharma"],
+    "Agriculture":    ["Agriculture", "Food Processing", "Agri"],
+    "Education":      ["Education", "EdTech", "NGO/Social Work"],
+    "Retail":         ["Retail", "FMCG", "E-commerce", "Consumer Goods"],
+    "Energy":         ["Energy", "Power", "Oil & Gas", "Renewable Energy"],
+    "Infrastructure": ["Infrastructure", "Construction", "Real Estate", "Logistics"],
+    "Media":          ["Media", "Entertainment", "Media & Entertainment"],
+    "Tourism":        ["Tourism", "Hospitality", "Aviation", "Travel"],
+    "Telecom":        ["Telecom", "Telecommunications", "IT/Software"],
+    "Logistics":      ["Logistics", "Infrastructure", "Supply Chain"],
+    "FMCG":           ["FMCG", "Retail", "Consumer Goods"],
+    "Automobile":     ["Automobile", "Automotive", "Manufacturing"],
+}
+
+# Build a reverse map: DB sector value → canonical keys that cover it
+_REVERSE_ALIAS: dict[str, list[str]] = {}
+for _key, _vals in SECTOR_ALIASES.items():
+    for _v in _vals:
+        _REVERSE_ALIAS.setdefault(_v, []).append(_key)
+
+
 class ContentBasedRecommender:
     def __init__(self):
         self.vectorizer = TfidfVectorizer(stop_words='english', lowercase=True)
@@ -15,8 +43,8 @@ class ContentBasedRecommender:
             'Graduate': 5,
             'Postgraduate': 6
         }
-        
-        # Mapping for related sectors to give partial credit (score 0.5)
+
+        # Legacy partial-credit relations (kept for backward compat)
         self.sector_relations = {
             'IT/Software': ['Telecommunications', 'E-commerce', 'Media'],
             'Manufacturing': ['Automotive', 'Logistics', 'Food Processing'],
@@ -27,58 +55,84 @@ class ContentBasedRecommender:
             'Finance/Banking': ['Real Estate'],
             'Tourism': ['Hospitality', 'Aviation']
         }
-        
+
         self.internships_data = []
         self.internship_tfidf = None
         self._is_loaded = False
 
+    # ------------------------------------------------------------------
+    # PROBLEM 2 FIX — safe JSON / list parser for skill fields
+    # ------------------------------------------------------------------
+    def _parse_skills(self, skills_field):
+        if skills_field is None:
+            return []
+        if isinstance(skills_field, list):
+            return [s for s in skills_field if s]
+        if isinstance(skills_field, str):
+            s = skills_field.strip()
+            if not s:
+                return []
+            try:
+                parsed = json.loads(s.replace("'", '"'))
+                return parsed if isinstance(parsed, list) else []
+            except Exception:
+                # Fallback: strip brackets, split on comma
+                return [x.strip().strip("'\"") for x in s.strip("[]").split(",") if x.strip()]
+        return []
+
     def load_internships(self):
         """Loads all active internships from DB at startup and caches them."""
-        # Using context since this might be called outside request context initially
         internships = Internship.query.filter_by(is_active=True).all()
         self.internships_data = []
-        
+
         for i in internships:
-            skills_str = " ".join(i.required_skills) if i.required_skills else ""
+            # PROBLEM 2 FIX — parse skills safely
+            parsed_skills = self._parse_skills(i.required_skills)
+            skills_str = " ".join(parsed_skills)
             self.internships_data.append({
                 'id': i.id,
                 'company': i.company,
                 'role': i.role,
                 'sector': i.sector,
-                'required_skills': i.required_skills or [],
+                'required_skills': parsed_skills,          # always a real list
                 'skills_text': skills_str,
                 'min_education': i.min_education,
                 'preferred_field': i.preferred_field,
                 'location_state': i.location_state,
+                'location_city': getattr(i, 'location_city', ''),
+                'stipend_monthly': getattr(i, 'stipend_monthly', 0),
                 'total_slots': i.total_slots,
                 'filled_slots': i.filled_slots,
             })
-            
+
         corpus = [i['skills_text'] for i in self.internships_data]
         if corpus:
             self.internship_tfidf = self.vectorizer.fit_transform(corpus)
         else:
             self.internship_tfidf = None
-            
+
         self._is_loaded = True
 
     def _calculate_skill_match(self, candidate_skills, internship_dict, index):
-        if not candidate_skills or not internship_dict['required_skills']:
-            return 0.0, [], internship_dict['required_skills']
-            
-        cand_skills_str = " ".join(candidate_skills)
+        # PROBLEM 2 FIX — parse candidate skills too
+        c_skills = self._parse_skills(candidate_skills)
+        i_skills = internship_dict['required_skills']   # already parsed in load_internships
+
+        if not c_skills or not i_skills:
+            return 0.0, [], i_skills
+
+        cand_skills_str = " ".join(c_skills)
         cand_vector = self.vectorizer.transform([cand_skills_str])
-        
+
         if self.internship_tfidf is not None:
             similarity = cosine_similarity(cand_vector, self.internship_tfidf[index:index+1])[0][0]
         else:
             similarity = 0.0
-            
-        cand_set = set([s.lower().strip() for s in candidate_skills])
-        
-        matched = [s for s in internship_dict['required_skills'] if s.lower().strip() in cand_set]
-        missing = [s for s in internship_dict['required_skills'] if s.lower().strip() not in cand_set]
-        
+
+        cand_set = {s.lower().strip() for s in c_skills}
+        matched  = [s for s in i_skills if s.lower().strip() in cand_set]
+        missing  = [s for s in i_skills if s.lower().strip() not in cand_set]
+
         return float(similarity), matched, missing
 
     def _calculate_education_match(self, cand_edu, req_edu):
@@ -86,10 +140,10 @@ class ContentBasedRecommender:
             return 1.0, "No specific education required"
         if not cand_edu:
             return 0.0, "Candidate education not provided"
-            
+
         cand_level = self.education_hierarchy.get(cand_edu, 0)
-        req_level = self.education_hierarchy.get(req_edu, 0)
-        
+        req_level  = self.education_hierarchy.get(req_edu, 0)
+
         if cand_level >= req_level:
             return 1.0, f"{cand_edu} meets or exceeds {req_edu} requirement"
         elif cand_level == req_level - 1:
@@ -98,28 +152,52 @@ class ContentBasedRecommender:
             return 0.0, f"{cand_edu} is significantly below {req_edu} requirement"
 
     def _calculate_sector_match(self, cand_sectors, req_sector):
+        """
+        PROBLEM 3 FIX — three-tier matching:
+          1. Exact string match                        → 1.0
+          2. Alias match (SECTOR_ALIASES lookup)       → 1.0
+          3. Legacy sector_relations partial credit    → 0.5
+        """
         if not req_sector:
             return 1.0, "Internship has no specific sector."
-        if not cand_sectors:
+
+        # PROBLEM 2 FIX — parse sector_interests safely
+        c_sectors = self._parse_skills(cand_sectors)
+
+        if not c_sectors:
             return 0.0, "No candidate sector preferences matched."
-            
-        if req_sector in cand_sectors:
+
+        # Tier 1 — exact string match
+        if req_sector in c_sectors:
             return 1.0, f"{req_sector} sector exactly matches your interests."
-            
+
+        # Tier 2 — alias match
+        # Check if req_sector (DB value) is an alias for any canonical key the candidate listed
+        canonical_keys_for_req = _REVERSE_ALIAS.get(req_sector, [])
+        for ck in canonical_keys_for_req:
+            if ck in c_sectors:
+                return 1.0, f"{req_sector} sector matches your {ck} interest."
+
+        # Also check if any candidate interest is an alias whose values include req_sector
+        for cs in c_sectors:
+            if req_sector in SECTOR_ALIASES.get(cs, []):
+                return 1.0, f"{req_sector} sector matches your {cs} interest."
+
+        # Tier 3 — legacy partial-credit relations
         related = self.sector_relations.get(req_sector, [])
-        for cs in cand_sectors:
+        for cs in c_sectors:
             if cs in related or req_sector in self.sector_relations.get(cs, []):
                 return 0.5, f"{req_sector} is related to your interested sectors."
-                
+
         return 0.0, f"{req_sector} does not match your sector interests."
 
     def _calculate_location_match(self, cand_state, req_state):
         if not req_state:
             return 1.0, "Internship has no strict location preference."
-        
-        if not cand_state or cand_state.lower() == 'pan-india':
+
+        if not cand_state or cand_state.strip() == '' or cand_state.lower() == 'pan-india':
             return 0.6, "Candidate prefers pan-India location."
-            
+
         if cand_state.lower() == req_state.lower():
             return 1.0, f"Located in {req_state}, perfectly matching your state."
         else:
@@ -136,81 +214,85 @@ class ContentBasedRecommender:
     def recommend(self, candidate_id, top_n=5, candidate_obj=None):
         if not self._is_loaded:
             self.load_internships()
-            
+
         candidate = candidate_obj if candidate_obj else Candidate.query.get(candidate_id)
         if not candidate:
             return []
-            
+
         recommendations = []
         for idx, internship in enumerate(self.internships_data):
             # 1. Skill Match (35%)
             skill_score, matched_skills, missing_skills = self._calculate_skill_match(
                 candidate.skills, internship, idx)
-                
+
             # 2. Education Match (25%)
             edu_score, edu_reason = self._calculate_education_match(
                 candidate.education_level, internship['min_education'])
-                
+
             # 3. Sector Match (20%)
             sector_score, sector_reason = self._calculate_sector_match(
                 candidate.sector_interests, internship['sector'])
-                
+
             # 4. Location Match (15%)
             loc_score, loc_reason = self._calculate_location_match(
                 candidate.state, internship['location_state'])
-                
+
             # 5. Capacity Check (5%)
             cap_score, slots_avail = self._calculate_capacity_check(
                 internship['total_slots'], internship['filled_slots'])
-                
+
             # Skip full internships entirely
             if cap_score == 0.0:
                 continue
-                
+
             # Weighted calculation
             final_score = (
                 skill_score * 0.35 +
-                edu_score * 0.25 +
+                edu_score   * 0.25 +
                 sector_score * 0.20 +
-                loc_score * 0.15 +
-                cap_score * 0.05
+                loc_score   * 0.15 +
+                cap_score   * 0.05
             )
-            
+
             reasons = {
                 "skill_match": {
-                    "score": round(skill_score, 2), 
-                    "matched_skills": matched_skills, 
+                    "score": round(skill_score, 2),
+                    "matched_skills": matched_skills,
                     "missing_skills": missing_skills
                 },
                 "education_match": {
-                    "score": round(edu_score, 2), 
+                    "score": round(edu_score, 2),
                     "reason": edu_reason
                 },
                 "sector_match": {
-                    "score": round(sector_score, 2), 
+                    "score": round(sector_score, 2),
                     "reason": sector_reason
                 },
                 "location_match": {
-                    "score": round(loc_score, 2), 
+                    "score": round(loc_score, 2),
                     "reason": loc_reason
                 },
                 "capacity": {
-                    "score": round(cap_score, 2), 
+                    "score": round(cap_score, 2),
                     "slots_available": slots_avail
                 }
             }
-            
+
             recommendations.append({
                 "internship_id": internship['id'],
-                "company": internship['company'],
-                "role": internship['role'],
-                "final_score": round(final_score, 4),
-                "reasons": reasons
+                "company":       internship['company'],
+                "role":          internship['role'],
+                "sector":        internship['sector'],                  # exposed here so hybrid can read it
+                "required_skills": internship['required_skills'],       # needed by verify script
+                "location_state":  internship['location_state'],
+                "stipend_monthly": internship['stipend_monthly'],
+                "final_score":   round(final_score, 4),
+                "reasons":       reasons
             })
-            
+
         recommendations.sort(key=lambda x: x['final_score'], reverse=True)
         return recommendations[:top_n]
 
+
 # Global instance
 content_based_recommender = ContentBasedRecommender()
-
