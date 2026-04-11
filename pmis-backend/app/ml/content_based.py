@@ -105,6 +105,46 @@ CANONICAL_FORMS: dict[str, str] = {
     "legal research":              "Legal Research",
 }
 
+# ─── NSDC / Skill India Course Links ─────────────────────────────────────────
+# Keyed by CANONICAL display name (same form used in CANONICAL_FORMS values).
+# When a missing skill has an entry here, it is surfaced in the API response
+# under reasons.skill_match.courses_for_missing.
+NSDC_COURSE_LINKS: dict[str, dict] = {
+    "Python":             {"course_name": "Python Programming",                    "url": "https://www.skillindiadigital.gov.in/", "duration": "40 hrs", "free": True},
+    "JavaScript":         {"course_name": "Web Development with JavaScript",        "url": "https://www.skillindiadigital.gov.in/", "duration": "60 hrs", "free": True},
+    "React":              {"course_name": "React.js Frontend Development",          "url": "https://www.skillindiadigital.gov.in/", "duration": "30 hrs", "free": True},
+    "SQL":                {"course_name": "Database Management with SQL",           "url": "https://www.skillindiadigital.gov.in/", "duration": "20 hrs", "free": True},
+    "Excel":              {"course_name": "Advanced Microsoft Excel",               "url": "https://www.skillindiadigital.gov.in/", "duration": "15 hrs", "free": True},
+    "Tally":              {"course_name": "Tally Prime for Accounting",             "url": "https://www.skillindiadigital.gov.in/", "duration": "25 hrs", "free": True},
+    "Accounting":         {"course_name": "Basics of Accounting",                  "url": "https://www.skillindiadigital.gov.in/", "duration": "30 hrs", "free": True},
+    "Machine Learning":   {"course_name": "Introduction to Machine Learning",      "url": "https://www.skillindiadigital.gov.in/", "duration": "50 hrs", "free": True},
+    "Data Analysis":      {"course_name": "Data Analytics Fundamentals",           "url": "https://www.skillindiadigital.gov.in/", "duration": "35 hrs", "free": True},
+    "Communication":      {"course_name": "Business Communication Skills",         "url": "https://www.skillindiadigital.gov.in/", "duration": "20 hrs", "free": True},
+    "English Speaking":   {"course_name": "Spoken English for Professionals",      "url": "https://www.skillindiadigital.gov.in/", "duration": "30 hrs", "free": True},
+    "AutoCAD":            {"course_name": "AutoCAD 2D/3D Design",                  "url": "https://www.skillindiadigital.gov.in/", "duration": "40 hrs", "free": True},
+    "Graphic Design":     {"course_name": "Graphic Design with Canva & Photoshop", "url": "https://www.skillindiadigital.gov.in/", "duration": "25 hrs", "free": True},
+    "Content Writing":    {"course_name": "Digital Content Writing",               "url": "https://www.skillindiadigital.gov.in/", "duration": "15 hrs", "free": True},
+    "Social Media":       {"course_name": "Social Media Marketing",                "url": "https://www.skillindiadigital.gov.in/", "duration": "20 hrs", "free": True},
+    "Financial Analysis": {"course_name": "Financial Modelling & Analysis",        "url": "https://www.skillindiadigital.gov.in/", "duration": "40 hrs", "free": True},
+    "Electrical Work":    {"course_name": "Basic Electrical Works",                "url": "https://www.skillindiadigital.gov.in/", "duration": "120 hrs", "free": True},
+    "Welding":            {"course_name": "Welding Technology",                    "url": "https://www.skillindiadigital.gov.in/", "duration": "150 hrs", "free": True},
+}
+
+
+def get_courses_for_missing(missing_display: list[str]) -> list[dict]:
+    """
+    Given a list of display-name skill strings that the candidate is missing,
+    return NSDC course suggestions for any that have a mapping.
+    Skills with no mapping are silently omitted.
+    """
+    courses = []
+    for skill in missing_display:
+        entry = NSDC_COURSE_LINKS.get(skill)
+        if entry:
+            courses.append({"skill": skill, **entry})
+    return courses
+
+
 # ─── Sector Aliases ───────────────────────────────────────────────────────────
 SECTOR_ALIASES: dict[str, list[str]] = {
     "IT":             ["IT/Software", "IT & Technology", "Software", "Technology",
@@ -401,9 +441,14 @@ class ContentBasedRecommender:
 
             reasons: dict = {
                 "skill_match": {
-                    "score":          round(skill_score, 2),
-                    "matched_skills": matched,
-                    "missing_skills": missing,
+                    "score":                round(skill_score, 2),
+                    "matched_skills":       matched,
+                    "missing_skills":       missing,
+                    "skill_gap_percentage": (
+                        int(len(missing) / len(internship['required_skills']) * 100)
+                        if internship['required_skills'] else 0
+                    ),
+                    "courses_for_missing":  get_courses_for_missing(missing),
                 },
                 "education_match": {
                     "score":  round(edu_score, 2),
