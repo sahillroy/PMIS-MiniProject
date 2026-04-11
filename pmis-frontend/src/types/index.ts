@@ -120,6 +120,13 @@ export interface Application {
 export interface Stats {
   total_candidates: number;
   total_internships: number;
+  total_applications: number;
+  conversion_rate: string;
+  sector_distribution: { sector: string; count: number; percentage: number }[];
+  state_distribution: { state: string; count: number; percentage: number }[];
+  category_breakdown: { GEN: number; OBC: number; SC: number; ST: number; [key: string]: number };
+  rural_percentage: number;
+  funnel: { registered: number; applied: number; accepted: number; joined: number };
 }
 
 export interface FeedbackResponse {
