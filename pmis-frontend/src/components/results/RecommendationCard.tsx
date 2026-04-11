@@ -25,7 +25,7 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
   const [isApplying, setIsApplying] = useState(false);
 
   // Feedback State
-  const candidateId = useProfileStore(state => state.id) || 1;
+  const candidateId = data.internship_id; // Fix: use internship_id as reference
   const incrementSessionFeedbackCount = useProfileStore(state => state.incrementSessionFeedbackCount);
   const [feedbackState, setFeedbackState] = useState<'none' | 'loading' | 'success' | 'done'>('none');
   const [feedbackType, setFeedbackType] = useState<'positive' | 'negative' | null>(null);
@@ -172,7 +172,11 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
           {expanded && (
             <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2">
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-100/50">
-                {R.skill_match && <SkillChart data={R.skill_match} />}
+                {R.skill_match && <SkillChart 
+                   data={R.skill_match} 
+                   matched={R.skill_match.matched_skills || []} 
+                   missing={R.skill_match.missing_skills || []} 
+                />}
                 
                 {R.location_match && R.location_match.score >= 0.8 && (
                   <div className="flex items-center gap-2">
