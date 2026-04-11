@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useProfileStore } from '../../store/profileStore';
 
 const EDUCATION_LEVELS = ['10th Pass', '12th Pass', 'ITI', 'Diploma', 'Graduate'];

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useProfileStore } from '../../store/profileStore';
 
 const SECTORS = [
