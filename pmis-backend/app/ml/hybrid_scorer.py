@@ -58,8 +58,8 @@ class HybridScorer:
         upper = min(100, match_percentage + band_pts)
 
         mode_label = (
-            "Personalised match"   if scoring_mode == "hybrid"
-            else "Profile-based match"
+            "Profile-based match" if scoring_mode == "content_only"
+            else "Personalised match"   # content_heavy or hybrid — CF is active
         )
         note = (
             f"Estimated {lower}–{upper}% match. "
