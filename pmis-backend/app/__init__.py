@@ -60,4 +60,19 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+        # ── Warm up ML models at startup (avoids cold-start lag on first request) ──
+        try:
+            from app.ml.content_based import content_based_recommender
+            from app.ml.collaborative import collaborative_filter
+            if not content_based_recommender._is_loaded:
+                logger.info("Warming up TF-IDF matrix...")
+                content_based_recommender.load_internships()
+                logger.info(f"TF-IDF matrix ready — {len(content_based_recommender.internships_data)} internships indexed.")
+            if not collaborative_filter.is_trained:
+                logger.info("Training collaborative filter...")
+                collaborative_filter.retrain()
+                logger.info("CF model ready.")
+        except Exception as e:
+            logger.warning(f"ML warm-up failed (non-critical): {e}")
+
     return app
