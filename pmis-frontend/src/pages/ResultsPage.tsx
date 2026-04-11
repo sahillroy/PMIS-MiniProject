@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../store/profileStore';
 import { useRecommendations } from '../hooks/useRecommendations';
 import RecommendationCard from '../components/results/RecommendationCard';
@@ -25,6 +26,7 @@ const FALLBACK_PROFILE = {
 
 export default function ResultsPage({ onSearchAgain }: Props) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   
   const profileStore = useProfileStore();
   const activeProfile = profileStore.skills.length > 0 ? profileStore : FALLBACK_PROFILE;
@@ -189,13 +191,19 @@ export default function ResultsPage({ onSearchAgain }: Props) {
              </div>
           )}
 
-          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20">
+          <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20 flex flex-col gap-2">
             <button 
               onClick={onSearchAgain}
               aria-label={t('refine_search')}
               className="w-full min-h-[56px] rounded-xl font-bold text-lg text-primary-blue border-2 border-primary-blue transition hover:bg-blue-50 bg-white"
             >
               {t('refine_search')}
+            </button>
+            <button 
+              onClick={() => navigate('/stats')}
+              className="w-full text-center text-sm text-gray-400 hover:text-blue-600 py-2"
+            >
+              📊 View Platform Stats
             </button>
           </div>
         </>
