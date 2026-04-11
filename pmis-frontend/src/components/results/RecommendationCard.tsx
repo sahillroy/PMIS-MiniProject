@@ -106,7 +106,7 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <IndianRupee className="w-4 h-4 text-gray-400 shrink-0" />
             <span className="font-semibold">{data.stipend_monthly}/mo</span>
-            {data.min_stipend_met && <CheckCircle2 className="w-3.5 h-3.5 text-success-green min-w-3.5" title="Meets your minimum" />}
+            {data.min_stipend_met && <span aria-label="Meets your minimum" title="Meets your minimum"><CheckCircle2 className="w-3.5 h-3.5 text-success-green min-w-3.5" /></span>}
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <GraduationCap className="w-4 h-4 text-gray-400 shrink-0" />

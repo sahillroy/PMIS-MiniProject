@@ -146,9 +146,9 @@ export default function ResultsPage({ onSearchAgain }: Props) {
             data={rec} 
             index={index} 
             compareMode={compareMode}
-            isSelected={selectedForCompare.includes(rec.internship_id)}
+            isSelected={selectedForCompare.includes(String(rec.internship_id))}
             canSelectMore={selectedForCompare.length < 2}
-            onSelectToggle={() => toggleCompareSelection(rec.internship_id)}
+            onSelectToggle={() => toggleCompareSelection(String(rec.internship_id))}
           />
         ))}
       </div>
@@ -180,7 +180,7 @@ export default function ResultsPage({ onSearchAgain }: Props) {
 
       {compareOpen && (
         <ComparePanel 
-           internships={recommendations.filter(r => selectedForCompare.includes(r.internship_id))}
+           internships={recommendations.filter(r => selectedForCompare.includes(String(r.internship_id)))}
            onClose={() => setCompareOpen(false)}
            onApply={(id) => {
              console.log("Applying to", id, "from compare mode");

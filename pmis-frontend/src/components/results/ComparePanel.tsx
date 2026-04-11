@@ -158,7 +158,7 @@ export default function ComparePanel({ internships, onClose, onApply }: Props) {
 
                 <div className="pt-4 border-t border-gray-100">
                   <button 
-                    onClick={() => onApply(rec.internship_id)}
+                    onClick={() => onApply(String(rec.internship_id))}
                     className="w-full py-2.5 bg-primary-blue text-white font-bold rounded-xl hover:bg-blue-900 transition text-sm"
                   >
                     Apply Now
