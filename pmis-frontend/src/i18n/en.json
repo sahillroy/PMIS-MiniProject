@@ -19,5 +19,9 @@
   "free_course": "Free Course",
   "compareMode": "Compare mode",
   "compareBtnLabel": "Compare 2 selected",
-  "closeCompare": "Close comparison"
+  "closeCompare": "Close comparison",
+  "feedbackQuestion": "Was this a good match?",
+  "goodMatch": "Yes, good match",
+  "notForMe": "Not for me",
+  "feedbackThanks": "Improving your recommendations..."
 }

@@ -19,5 +19,9 @@
   "free_course": "मुफ्त कोर्स",
   "compareMode": "तुलना मोड",
   "compareBtnLabel": "2 चुने हुए की तुलना करें",
-  "closeCompare": "तुलना बंद करें"
+  "closeCompare": "तुलना बंद करें",
+  "feedbackQuestion": "क्या यह एक अच्छा मेल था?",
+  "goodMatch": "हाँ, अच्छा मेल",
+  "notForMe": "मेरे लिए नहीं",
+  "feedbackThanks": "आपकी सिफारिशें सुधारी जा रही हैं..."
 }

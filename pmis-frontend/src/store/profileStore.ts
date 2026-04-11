@@ -18,6 +18,7 @@ export interface CandidateState {
   phone: string;
   currentStep: number;
   min_stipend_preference: number;  // Phase 3 · Slot 1
+  sessionFeedbackCount: number;
 }
 
 interface ProfileStore extends CandidateState {
@@ -34,6 +35,7 @@ interface ProfileStore extends CandidateState {
   fetchRecommendations: () => Promise<void>;
   applyToInternshipLocal: (internshipId: number) => void;
   loadDemoProfile: () => void;
+  incrementSessionFeedbackCount: () => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -53,6 +55,7 @@ export const useProfileStore = create<ProfileStore>()(
       phone: '',
       currentStep: 1,
       min_stipend_preference: 0,
+      sessionFeedbackCount: 0,
 
       recommendations: [],
       isLoading: false,
@@ -63,6 +66,7 @@ export const useProfileStore = create<ProfileStore>()(
       setStep: (step) => set({ currentStep: step }),
       nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 4) })),
       prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
+      incrementSessionFeedbackCount: () => set((state) => ({ sessionFeedbackCount: state.sessionFeedbackCount + 1 })),
       
       loadDemoProfile: () => set({
         education_level: '12th',           // matches DB enum: 10th|12th|ITI|Diploma|Graduate

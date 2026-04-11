@@ -121,3 +121,17 @@ export interface Stats {
   total_candidates: number;
   total_internships: number;
 }
+
+export interface FeedbackResponse {
+  recorded: boolean;
+  feedback: string;
+  retraining: boolean;
+  message: string;
+}
+
+export interface CFStatusResponse {
+  interaction_count: number;
+  scoring_mode: string;
+  cf_weight: number;
+  next_threshold: string;
+}

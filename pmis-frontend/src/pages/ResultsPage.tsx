@@ -3,7 +3,9 @@ import { useProfileStore } from '../store/profileStore';
 import { useRecommendations } from '../hooks/useRecommendations';
 import RecommendationCard from '../components/results/RecommendationCard';
 import ComparePanel from '../components/results/ComparePanel';
+import CFStatusBanner from '../components/results/CFStatusBanner';
 import { useTranslation } from 'react-i18next';
+import { RefreshCw } from 'lucide-react';
 
 interface Props {
   onSearchAgain: () => void;
@@ -103,6 +105,27 @@ export default function ResultsPage({ onSearchAgain }: Props) {
       </div>
 
       <div className="p-4 space-y-4 -mt-6 relative z-10">
+        {!isLoading && !error && recommendations.length > 0 && (
+          <CFStatusBanner />
+        )}
+
+        {!isLoading && profileStore.sessionFeedbackCount >= 3 && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4 text-center shadow-sm animate-in fade-in slide-in-from-top-2">
+            <p className="text-sm text-indigo-900 mb-3 font-medium">You've rated {profileStore.sessionFeedbackCount} internships. Want to refresh your recommendations with your feedback?</p>
+            <button 
+              onClick={() => {
+                // Reset session count to avoid spamming the refresh button
+                profileStore.setField('sessionFeedbackCount', 0);
+                fetchRecommendations();
+              }}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-indigo-700 transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+        )}
+
         {isLoading && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (

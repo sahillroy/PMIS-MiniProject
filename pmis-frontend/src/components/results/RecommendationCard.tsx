@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { api } from '../../api/client';
+import { useProfileStore } from '../../store/profileStore';
 import type { Recommendation } from '../../types';
 import MatchBreakdown from './MatchBreakdown';
 import SkillChart from './SkillChart';
-import { MapPin, IndianRupee, GraduationCap, Users, Info, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, IndianRupee, GraduationCap, Users, Info, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
@@ -22,6 +24,12 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
   const [applied, setApplied] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
 
+  // Feedback State
+  const candidateId = useProfileStore(state => state.id) || 1;
+  const incrementSessionFeedbackCount = useProfileStore(state => state.incrementSessionFeedbackCount);
+  const [feedbackState, setFeedbackState] = useState<'none' | 'loading' | 'success' | 'done'>('none');
+  const [feedbackType, setFeedbackType] = useState<'positive' | 'negative' | null>(null);
+
   const matchPercent = data.match_percentage;
   const badgeColor = matchPercent >= 75 ? 'text-success-green border-success-green bg-green-50' : matchPercent >= 50 ? 'text-amber-600 border-amber-600 bg-amber-50' : 'text-gray-500 border-gray-400 bg-gray-50';
 
@@ -29,7 +37,7 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
     setIsApplying(true);
     try {
       await axios.post('http://127.0.0.1:5000/api/v1/apply/', {
-        candidate_id: 1, 
+        candidate_id: candidateId, 
         internship_id: data.internship_id
       });
       setApplied(true);
@@ -41,14 +49,39 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
     }
   };
 
+  const handleFeedback = async (type: 'positive' | 'negative') => {
+    setFeedbackState('loading');
+    setFeedbackType(type);
+    try {
+      await api.submitFeedback(candidateId, data.internship_id, type);
+      incrementSessionFeedbackCount();
+      setFeedbackState('success');
+      setTimeout(() => {
+        setFeedbackState('done');
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      setFeedbackState('none');
+      setFeedbackType(null);
+    }
+  };
+
   const R = data.reasons;
   const hasAffirmative = R?.affirmative_action && R.affirmative_action.total_boost > 0;
+  
+  let borderClass = 'border-gray-200';
+  if (feedbackState === 'success' || feedbackState === 'done') {
+    if (feedbackType === 'positive') borderClass = 'border-success-green border-2 shadow-sm shadow-green-100';
+    else if (feedbackType === 'negative') borderClass = 'border-red-400 border-2 shadow-sm shadow-red-100';
+  }
+
+  // Calculate animation delay for staggered entrance
+  const animationDelay = index ? `${index * 100}ms` : '0ms';
 
   return (
     <div 
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative staggered-entrance" 
-      aria-label="Recommendation entry"
-      style={{ animationDelay: `${(index || 0) * 100}ms` }}
+      className={`bg-white rounded-3xl border shadow-sm hover:shadow-xl transition duration-300 relative overflow-hidden group motion-safe:animate-scale-in text-left focus-within:ring-2 focus-within:ring-primary-blue ${borderClass}`}
+      style={{ animationDelay }}
     >
       <div className="p-5">
         {/* Header Block */}
@@ -72,24 +105,30 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
             <h2 className="text-base font-bold text-gray-900 leading-tight pr-2">{data.company}</h2>
             <p className="text-sm font-medium text-gray-500 mt-1">{data.role}</p>
           </div>
-          <div className="flex flex-col items-center">
-            <div 
-              className={`shrink-0 flex flex-col items-center justify-center w-[54px] h-[54px] rounded-full border-[3px] shadow-sm ${badgeColor}`}
-              aria-label={`${matchPercent} percent match`}
+          
+          <div className="flex flex-col items-end">
+            {/* Match Percentage Badge */}
+            <button 
+              onClick={() => setShowModal(true)}
+              aria-label={`Match breakdown: ${matchPercent}% match`}
+              className={`w-14 h-14 rounded-full border-4 flex items-center justify-center cursor-pointer transition transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue ${badgeColor}`}
             >
-              <span className="text-sm font-black tracking-tighter">{matchPercent}%</span>
-              <span className="text-[9px] font-bold uppercase tracking-wider -mt-1 opacity-80">Match</span>
-            </div>
+              <div className="text-center mt-0.5">
+                <span className="block text-lg font-black leading-none">{matchPercent}</span>
+                <span className="block text-[8px] font-bold uppercase tracking-wide opacity-80 mt-0.5">%</span>
+              </div>
+            </button>
             
+            {/* Phase 3 Slot 2: Confidence Area */}
             {data.confidence && (
               <div 
-                className="flex flex-col items-center mt-1 cursor-help"
+                className="mt-1.5 flex flex-col items-end cursor-pointer group/conf relative"
                 title={data.confidence.confidence_note}
               >
                 <div className="flex items-center gap-1">
-                  <div className={`w-1.5 h-1.5 rounded-full ${data.confidence.confidence_upper - data.confidence.confidence_lower <= 10 ? 'bg-success-green' : 'bg-amber-400'}`}></div>
-                  <span className="text-[10px] text-gray-500 font-semibold leading-none tracking-tight">
-                    {data.confidence.confidence_lower}–{data.confidence.confidence_upper}% range
+                  <div className={`w-1.5 h-1.5 rounded-full ${(data.confidence.confidence_upper - data.confidence.confidence_lower) <= 10 ? 'bg-success-green' : 'bg-amber-400'}`} />
+                  <span className="text-[10px] font-bold text-gray-500 tracking-tight">
+                    {data.confidence.confidence_lower}-{data.confidence.confidence_upper}% {t('match_range_label') || 'range'}
                   </span>
                 </div>
               </div>
@@ -118,55 +157,24 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
           </div>
         </div>
 
-        {/* Why this match - Collapsible */}
-        <div className="border-t border-gray-100 pt-4">
+        {/* Expand/Collapse Matches section */}
+        <div className="mt-4 border-t border-gray-100 pt-3">
           <button 
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center justify-between w-full pb-1 select-none focus:outline-none focus:ring-2 focus:ring-blue-100 rounded"
+            type="button"
+            className="flex items-center justify-between w-full text-left py-1 text-sm font-bold text-gray-700 hover:text-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue rounded"
             aria-expanded={expanded}
-            aria-label={t('why_match')}
+            onClick={() => setExpanded(!expanded)}
           >
-            <h3 className="font-bold text-gray-800 text-sm">{t('why_match')}</h3>
-            <div className="min-w-[44px] min-h-[44px] -mr-3 flex justify-center items-center rounded-full hover:bg-gray-50">
-              {expanded ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
-            </div>
+            <span>{t('why_this_match')}</span>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           
           {expanded && (
-            <div className="animate-in fade-in slide-in-from-top-2 mt-2">
-              {data.confidence && (
-                <div className="flex flex-col gap-1.5 mb-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-800">🎯 Match confidence: {data.confidence.confidence_lower}–{data.confidence.confidence_upper}%</span>
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${data.confidence.scoring_mode_label === 'Personalised Match' || data.confidence.scoring_mode_label === 'Personalised match' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
-                      {data.confidence.scoring_mode_label || 'Profile-based'}
-                    </span>
-                  </div>
-                  {/* Mini band visualization (0 to 100) */}
-                  <div className="w-full bg-gray-200 h-1.5 rounded-full relative mt-0.5">
-                    <div className="absolute h-1.5 bg-gray-400 rounded-full" style={{ left: `${data.confidence.confidence_lower}%`, right: `${100 - data.confidence.confidence_upper}%`}}></div>
-                    <div className="absolute h-2.5 w-1 bg-gray-800 rounded-full top-1/2 -translate-y-1/2" style={{ left: `${matchPercent}%` }}></div>
-                  </div>
-                </div>
-              )}
-
-              {R.skill_match && (
-                <SkillChart 
-                  matched={R.skill_match.matched_skills || []} 
-                  missing={R.skill_match.missing_skills || []} 
-                  data={R.skill_match}
-                />
-              )}
-              
-              <div className="space-y-3 mt-4">
-                {R.sector_match && R.sector_match.score >= 1.0 && (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-success-green shrink-0" />
-                    <span className="text-xs font-semibold text-gray-700 flex-1 leading-snug">Sector aligns directly with your interests</span>
-                    <div className="w-12 h-1.5 ml-auto bg-success-green rounded-full shadow-inner opacity-80" />
-                  </div>
-                )}
-                {R.location_match && (
+            <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2">
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100/50">
+                {R.skill_match && <SkillChart data={R.skill_match} />}
+                
+                {R.location_match && R.location_match.score >= 0.8 && (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-success-green shrink-0" />
                     <span className="text-xs font-semibold text-gray-700 flex-1 leading-snug">Location: {R.location_match.reason}</span>
@@ -223,7 +231,7 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
           aria-live="polite"
           aria-busy={isApplying}
           aria-label={applied ? t('applied') : t('apply_now')}
-          className={`w-full min-h-[52px] rounded-xl font-bold text-sm transition flex justify-center items-center gap-2 ${
+          className={`w-full min-h-[52px] rounded-xl font-bold text-sm transition flex justify-center items-center gap-2 mb-3 ${
             applied 
               ? 'bg-success-green text-white shadow-sm border-2 border-success-green opacity-90' 
               : 'bg-primary-blue text-white shadow-md hover:bg-blue-900 hover:-translate-y-0.5 active:translate-y-0'
@@ -240,6 +248,50 @@ export default function RecommendationCard({ data, index, compareMode, isSelecte
              <span>{t('apply_now')}</span>
           )}
         </button>
+
+        {/* Feedback Section */}
+        {feedbackState !== 'done' && (
+          <div className="border-t border-gray-200/60 pt-3">
+            {feedbackState === 'none' && (
+              <div className="flex flex-col animate-in fade-in">
+                <span className="text-xs font-bold text-gray-500 mb-2 text-center">
+                  {t('feedbackQuestion') || 'Was this a good match?'}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => handleFeedback('positive')}
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 bg-white text-gray-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 border border-gray-200 rounded-lg text-xs font-bold transition"
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                    {t('goodMatch') || 'Yes, good match'}
+                  </button>
+                  <button 
+                    onClick={() => handleFeedback('negative')}
+                    className="flex items-center justify-center gap-1.5 py-2 px-2 bg-white text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-gray-200 rounded-lg text-xs font-bold transition"
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                    {t('notForMe') || 'Not for me'}
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {feedbackState === 'loading' && (
+              <div className="flex items-center justify-center py-2 animate-in fade-in">
+                 <div className="w-4 h-4 border-2 border-primary-blue border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {feedbackState === 'success' && (
+              <div className="flex items-center justify-center gap-2 py-2 animate-in fade-in slide-in-from-bottom-1">
+                 <CheckCircle2 className="w-4 h-4 text-success-green" />
+                 <span className="text-xs font-bold text-gray-600">
+                   {t('feedbackThanks') || 'Improving your recommendations...'}
+                 </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showModal && (

@@ -49,5 +49,15 @@ export const api = {
   getStats: async (): Promise<Stats> => {
     const response = await apiClient.get('/stats');
     return response.data;
+  },
+
+  submitFeedback: async (candidateId: number, internshipId: number, feedback: "positive" | "negative" | "neutral"): Promise<import('../types').FeedbackResponse> => {
+    const response = await apiClient.post('/feedback', { candidate_id: candidateId, internship_id: internshipId, feedback });
+    return response.data;
+  },
+
+  getFeedbackStatus: async (candidateId: number): Promise<import('../types').CFStatusResponse> => {
+    const response = await apiClient.get(`/feedback/status?candidate_id=${candidateId}`);
+    return response.data;
   }
 };
