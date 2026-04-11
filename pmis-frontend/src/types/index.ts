@@ -11,6 +11,7 @@ export interface CandidateProfile {
   is_rural: boolean;
   category: string;
   has_prior_internship: boolean;
+  min_stipend_preference?: number;  // Phase 3 · Slot 1
 }
 
 export interface Internship {
@@ -26,11 +27,29 @@ export interface Internship {
   is_active: boolean;
 }
 
+export interface NSDCCourse {
+  skill: string;
+  course_name: string;
+  url: string;
+  duration: string;
+  free: boolean;
+}
+
+export interface ConfidenceBand {
+  match_percentage: number;
+  confidence_lower: number;
+  confidence_upper: number;
+  confidence_note: string;
+  scoring_mode_label: string;
+}
+
 export interface RecommendationBreakdown {
   score: number;
   reason?: string;
   matched_skills?: string[];
   missing_skills?: string[];
+  skill_gap_percentage?: number;
+  courses_for_missing?: NSDCCourse[];
   slots_available?: number;
 }
 
@@ -44,6 +63,7 @@ export interface Recommendation {
   company: string;
   role: string;
   sector: string;
+  required_skills?: string[];
   location: string;
   stipend_monthly: number;
   match_percentage: number;
@@ -52,6 +72,9 @@ export interface Recommendation {
   affirmative_boost: number;
   final_score: number;
   scoring_mode: string;
+  confidence?: ConfidenceBand;
+  min_stipend_met?: boolean;
+  stipend_warning?: string;
   reasons: {
     skill_match?: RecommendationBreakdown;
     education_match?: RecommendationBreakdown;
@@ -62,6 +85,11 @@ export interface Recommendation {
       affirmative_boosts_applied: AffirmativeBoost[];
       total_boost: number;
       note: string;
+    };
+    confidence?: {
+      band: string;
+      note: string;
+      label: string;
     };
   };
 }

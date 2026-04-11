@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { ArrowLeft, Users, Briefcase, Target, PieChart } from 'lucide-react';
 
@@ -48,6 +48,15 @@ export default function StatsPage({ onBack }: Props) {
   }, []);
 
   const maxVal = Math.max(...stats.top_sectors.map(s => s.count));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center max-w-md mx-auto relative shadow-xl font-sans">
+        <div className="w-10 h-10 border-4 border-primary-blue border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-600 font-medium">Loading analytics...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative shadow-xl font-sans pb-10">

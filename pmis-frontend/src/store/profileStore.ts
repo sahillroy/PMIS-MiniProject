@@ -17,6 +17,7 @@ export interface CandidateState {
   name: string;
   phone: string;
   currentStep: number;
+  min_stipend_preference: number;  // Phase 3 · Slot 1
 }
 
 interface ProfileStore extends CandidateState {
@@ -51,6 +52,7 @@ export const useProfileStore = create<ProfileStore>()(
       name: '',
       phone: '',
       currentStep: 1,
+      min_stipend_preference: 0,
 
       recommendations: [],
       isLoading: false,
@@ -88,7 +90,8 @@ export const useProfileStore = create<ProfileStore>()(
             sector_interests: state.sector_interests,
             state: state.preferred_state,
             category: state.category || "General",
-            is_rural: state.is_rural
+            is_rural: state.is_rural,
+            min_stipend_preference: state.min_stipend_preference ?? 0,
           } as unknown as CandidateProfile;
           
           const results = await api.getRecommendations(profilePayload);
@@ -120,7 +123,8 @@ export const useProfileStore = create<ProfileStore>()(
         category: state.category,
         is_rural: state.is_rural,
         district: state.district,
-        currentStep: state.currentStep
+        currentStep: state.currentStep,
+        min_stipend_preference: state.min_stipend_preference,
       }), // Strip error/loading states from persistent storage
     }
   )
