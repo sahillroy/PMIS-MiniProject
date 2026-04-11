@@ -113,8 +113,8 @@ export default function ResultsPage({ onSearchAgain }: Props) {
           </div>
         )}
 
-        {!isLoading && !error && recommendations.map((rec) => (
-          <RecommendationCard key={rec.internship_id} data={rec} />
+        {!isLoading && !error && recommendations.map((rec, index) => (
+          <RecommendationCard key={rec.internship_id} data={rec} index={index} />
         ))}
       </div>
 
